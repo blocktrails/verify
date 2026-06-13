@@ -99,10 +99,13 @@
     let trail;
     try {
       const r = await fetch(uri);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) {
+        out.innerHTML = `<div class="card err">No trail at that URL — <code>${uri}</code> returned <b>HTTP ${r.status}</b>. Check the path points to a <code>blocktrails.json</code>.</div>`;
+        return;
+      }
       trail = await r.json();
     } catch (e) {
-      out.innerHTML = `<div class="card err">Couldn't fetch the trail (${e.message}). The host must allow cross-origin reads (CORS), and the URL must point to a <code>blocktrails.json</code>.</div>`;
+      out.innerHTML = `<div class="card err">Couldn't reach <code>${uri}</code> (${e.message}). If the file does exist there, the host may not allow cross-origin reads (CORS).</div>`;
       return;
     }
 
