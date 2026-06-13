@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blocktrails Verifier</title>
+<meta name="description" content="Verify a blocktrails trail against Bitcoin — fetches a blocktrails.json and checks each mark on-chain.">
+<style>
+  :root {
+    --bg: #f2f5fa; --card: #fff; --edge: #e2e8f2; --text: #1e293b; --muted: #64748b;
+    --ok: #16a34a; --okbg: #ecfdf3; --pend: #d97706; --pendbg: #fffaeb; --bad: #dc2626; --badbg: #fef2f2; --link: #0d9488;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: radial-gradient(1100px 500px at 50% -120px, #e6eef7 0%, var(--bg) 60%);
+    color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh; padding-bottom: 3rem; }
+  main { max-width: 760px; margin: 0 auto; padding: 1.4rem 1rem; }
+  header { text-align: center; margin-bottom: 1.4rem; }
+  header h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+  header .sub { color: var(--muted); margin-top: 0.4rem; font-size: 0.92rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .uribar { display: flex; gap: 0.5rem; }
+  .uribar input { flex: 1; border: 1px solid var(--edge); border-radius: 8px; padding: 0.55rem 0.7rem; font-size: 0.88rem; font-family: ui-monospace, monospace; }
+  .uribar button { background: var(--ok); color: #fff; border: none; border-radius: 8px; padding: 0 1.1rem; font-weight: 700; cursor: pointer; }
+  .summary { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+  .bigstat { font-size: 1.15rem; font-weight: 800; }
+  .pill { display: inline-block; font-size: 0.66rem; font-weight: 800; padding: 0.12rem 0.5rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .pill.ok { background: var(--okbg); color: var(--ok); } .pill.pend { background: var(--pendbg); color: var(--pend); } .pill.bad { background: var(--badbg); color: var(--bad); }
+  .meta { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+  .meta code { font-family: ui-monospace, monospace; font-size: 0.92em; background: #f1f5f9; padding: 0.05rem 0.3rem; border-radius: 4px; }
+  h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.7rem; }
+  .mark { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.6rem; align-items: start; padding: 0.7rem 0; border-top: 1px solid #eef2f8; }
+  .mark:first-of-type { border-top: none; }
+  .mark .ix { width: 1.6rem; height: 1.6rem; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
+  .mark .ix.ok { background: var(--okbg); color: var(--ok); } .mark .ix.pend { background: var(--pendbg); color: var(--pend); } .mark .ix.bad { background: var(--badbg); color: var(--bad); }
+  .mark .body .commit { font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; }
+  .mark .body .det { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.55; font-family: ui-monospace, monospace; }
+  .mark .body .det .lbl { font-family: inherit; }
+  .mark .stat { text-align: right; white-space: nowrap; }
+  .note { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 1.6rem; }
+  .err { color: var(--bad); }
+  .spin { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>⛓ Blocktrails Verifier</h1>
+    <div class="sub">Checks a <a href="https://blocktrails.org" target="_blank" rel="noopener">blocktrails</a> trail against Bitcoin — each git mark, verified on-chain.</div>
+  </header>
+
+  <div class="card">
+    <form class="uribar" id="form">
+      <input id="uri" type="text" placeholder="https://…/blocktrails.json" spellcheck="false">
+      <button type="submit">Verify</button>
+    </form>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>
+    A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
+    proves a trail's history is <b>timestamped and tamper-evident</b> on Bitcoin — not that its contents are correct.
+  </footer>
+</main>
+
+<script>
+  const out = document.getElementById('out');
+  const NETS = { tbtc4: 'testnet4', tbtc3: 'testnet', tbtc: 'testnet', btc: '', mainnet: '', bitcoin: '' };
+  const apiBase = chain => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/api';
+  const explorer = (chain, txid) => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/tx/' + txid;
+  const short = s => s ? s.slice(0, 10) + '…' : '';
+
+  function parseTxo(uri) {
+    // txo:<chain>:<txid>:<vout>?amount=A&commit=C&pubkey=P
+    const m = uri.match(/^txo:([a-z0-9]+):([0-9a-f]{64}):(\d+)(?:\?(.*))?$/i);
+    if (!m) return null;
+    const q = new URLSearchParams(m[4] || '');
+    return { chain: m[1], txid: m[2], vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null, commit: q.get('commit'), pubkey: q.get('pubkey') };
+  }
+
+  function normalize(uri) {
+    uri = uri.trim();
+    if (!/^https?:\/\//.test(uri)) uri = 'https://' + uri;
+    if (!/blocktrails\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
+    return uri;
+  }
+
+  async function verify(rawUri) {
+    const uri = normalize(rawUri);
+    document.getElementById('uri').value = uri;
+    history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
+    out.innerHTML = `<div class="card spin">Fetching <code>${uri}</code> …</div>`;
+
+    let trail;
+    try {
+      const r = await fetch(uri);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      trail = await r.json();
+    } catch (e) {
+      out.innerHTML = `<div class="card err">Couldn't fetch the trail (${e.message}). The host must allow cross-origin reads (CORS), and the URL must point to a <code>blocktrails.json</code>.</div>`;
+      return;
+    }
+
+    const txos = (trail.txo || []).map(parseTxo);
+    const states = trail.states || [];
+    const chain = trail.chain || (txos[0] && txos[0].chain) || 'tbtc4';
+
+    out.innerHTML = `
+      <div class="card">
+        <h3>Trail</h3>
+        <div class="meta">
+          Profile <code>${trail.profile || '?'}</code> · schema <code>${trail.version || '?'}</code> · chain <code>${chain}</code>${NETS[chain] !== '' ? ' (testnet)' : ''}<br>
+          Base key <code>${short(trail.pubkeyBase || '')}</code> · <b>${txos.length}</b> mark${txos.length === 1 ? '' : 's'}<br>
+          Source <a href="${uri}" target="_blank" rel="noopener">${uri}</a>
+        </div>
+      </div>
+      <div class="card">
+        <div class="summary"><span class="bigstat" id="bigstat">Verifying ${txos.length} marks on-chain…</span></div>
+        <div id="marks" style="margin-top:.8rem"></div>
+        <div class="note" style="margin-top:1rem">Each mark spends the previous one to a fresh taproot address and stamps a git commit. Confirmed on Bitcoin = that snapshot existed at that block, unaltered since.${NETS[chain] !== '' ? ' <b>This is testnet</b> — a demonstration, not mainnet-grade value.' : ''}</div>
+      </div>`;
+
+    const marksEl = document.getElementById('marks');
+    let okCount = 0, pendCount = 0, badCount = 0;
+
+    for (let i = 0; i < txos.length; i++) {
+      const t = txos[i];
+      const row = document.createElement('div');
+      row.className = 'mark';
+      row.innerHTML = `<div class="ix spin">…</div><div class="body"><div class="commit">${short(states[i] || t.commit || '?')}</div><div class="det">checking…</div></div><div class="stat"></div>`;
+      marksEl.appendChild(row);
+
+      let cls = 'bad', label = 'not found', det = '';
+      try {
+        const tx = await (await fetch(apiBase(t.chain) + '/tx/' + t.txid)).json();
+        const o = tx.vout && tx.vout[t.vout];
+        const amtOK = t.amount == null || (o && o.value === t.amount);
+        const linkOK = i === 0 || (txos[i-1] && tx.vin && tx.vin.some(v => v.txid === txos[i-1].txid));
+        if (tx.status && tx.status.confirmed) {
+          cls = amtOK ? 'ok' : 'pend';
+          label = amtOK ? 'verified' : 'amount mismatch';
+          if (amtOK) okCount++; else badCount++;
+          det = `tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · block ${tx.status.block_height}` +
+                (o ? ` · ${o.value.toLocaleString()} sats${amtOK ? ' ✓' : ' ✗'}` : '') +
+                ` · ${o && o.scriptpubkey_address ? '<span title="output address">'+short(o.scriptpubkey_address)+'</span>' : ''}` +
+                (i > 0 ? ` · ${linkOK ? 'links to prev ✓' : 'chain link ✗'}` : ' · genesis');
+        } else {
+          cls = 'pend'; label = 'unconfirmed'; pendCount++;
+          det = `tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · in mempool, not yet in a block`;
+        }
+      } catch (e) {
+        cls = 'bad'; label = 'not found'; badCount++;
+        det = `tx <code>${short(t.txid)}</code> not found on ${t.chain} — may be unbroadcast or wrong network`;
+      }
+      row.querySelector('.ix').className = 'ix ' + cls;
+      row.querySelector('.ix').textContent = cls === 'ok' ? '✓' : cls === 'pend' ? '⏳' : '✗';
+      row.querySelector('.det').innerHTML = det;
+      row.querySelector('.stat').innerHTML = `<span class="pill ${cls}">${label}</span>`;
+    }
+
+    const allOK = okCount === txos.length;
+    const big = document.getElementById('bigstat');
+    big.innerHTML = allOK
+      ? `<span class="pill ok">verified</span> all ${okCount}/${txos.length} marks confirmed on-chain`
+      : `<span class="pill ${badCount ? 'bad' : 'pend'}">partial</span> ${okCount} verified · ${pendCount} pending · ${badCount} unverified`;
+  }
+
+  document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('uri').value; if (v.trim()) verify(v); });
+  const param = new URLSearchParams(location.search).get('uri');
+  if (param) verify(param);
+  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, or link here with <code>?uri=…</code>. The trail is fetched live and each mark checked against the Bitcoin chain it names.</div>`;
+</script>
+</body>
+</html>
