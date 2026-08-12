@@ -46,6 +46,11 @@
   .stat .n { font-size: 0.74rem; color: var(--muted); margin-top: 0.1rem; }
   .note { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
   .warnbox { background: var(--pendbg); border: 1px solid #f1dcae; border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.8rem; color: #7a5200; margin-top: 0.8rem; }
+  .dangerbox { background: var(--badbg); border: 1px solid #f3c1c1; border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.82rem; color: #8e1d1d; margin-top: 0.8rem; line-height: 1.6; }
+  button.op { font: inherit; font-weight: 700; border: none; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
+  button.op.danger { background: var(--bad); color: #fff; }
+  button.op.quiet { background: #eef2f7; color: var(--text); }
+  button.op[disabled] { opacity: 0.5; cursor: default; }
   footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 1.6rem; }
   .err { color: var(--bad); }
   .spin { color: var(--muted); }
@@ -72,6 +77,11 @@
   </div>
 
   <div id="out"></div>
+
+  <div class="card" id="sweepcard" hidden>
+    <h3>Operations · send back to self</h3>
+    <div class="meta" id="sweep-body"></div>
+  </div>
 
   <footer>
     A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
@@ -207,6 +217,14 @@
     } else if (!tip) {
       warn.innerHTML = `<div class="warnbox">⚠ No live UTXO: the last mark's output is spent outside the trail. This chain cannot advance — retired.</div>`;
     }
+
+    // remember what we're looking at, for the operations card
+    lastInspect = {
+      uri, profile: trail.profile,
+      hex: /^02([0-9a-f]{64})$/.exec(String(trail.pubkeyBase || '')) ? String(trail.pubkeyBase).slice(2) : null,
+      tipLive: !!tip, tipConfirmed: !!(tip && tip.confirmed), tipValue: tipVal,
+    };
+    renderSweepCard();
   }
 
   document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('uri').value; if (v.trim()) inspect(v); });
@@ -240,10 +258,119 @@
     document.getElementById('mine').hidden = false;
   }
   function hideMine() { document.getElementById('mine').hidden = true; }
-  document.addEventListener('xlogin', e => { if (e.detail && e.detail.type === 'nostr') showMine(e.detail.id); else hideMine(); });
-  document.addEventListener('xlogout', hideMine);
+  document.addEventListener('xlogin', e => { if (e.detail && e.detail.type === 'nostr') showMine(e.detail.id); else hideMine(); renderSweepCard(); });
+  document.addEventListener('xlogout', () => { hideMine(); renderSweepCard(); });
   // restored sessions set window.xlogin without necessarily re-firing the event
-  setTimeout(() => { if (window.xlogin && window.xlogin.type === 'nostr' && window.xlogin.id) showMine(window.xlogin.id); }, 500);
+  setTimeout(() => { if (window.xlogin && window.xlogin.type === 'nostr' && window.xlogin.id) showMine(window.xlogin.id); renderSweepCard(); }, 500);
+
+  // ---- operations: send back to self (sweep = explicit closure) ------------
+  // Appears only when: the inspected trail is a tidegate profile, its base
+  // key matches the signed-in nostr identity, and the tip UTXO is live and
+  // confirmed. The maths and signing come from tidegate/anchor.js (the same
+  // module Tideholm's Anchor button uses); this page adds only the ceremony —
+  // a keyless preview, a plainly-worded warning, and a confirm.
+  const ANCHOR_MOD = 'https://melvincarvalho.github.io/tidegate/anchor.js';
+  let lastInspect = null;
+  let sweepBusy = false;
+
+  function myHex() {
+    return (window.xlogin && window.xlogin.type === 'nostr' && /^[0-9a-f]{64}$/.test(String(window.xlogin.id || '')))
+      ? window.xlogin.id : null;
+  }
+  function renderSweepCard() {
+    const card = document.getElementById('sweepcard');
+    const li = lastInspect;
+    const mine = myHex();
+    const on = li && li.profile === 'tidegate' && li.hex && mine === li.hex && li.tipLive;
+    card.hidden = !on;
+    if (!on) return;
+    const body = document.getElementById('sweep-body');
+    body.textContent = '';
+    const p = document.createElement('div');
+    p.innerHTML = `The live tip holds <b>${sats(li.tipValue)} sats</b>. Sweeping sends them to your own base address` +
+      (li.tipConfirmed ? '.' : ' — <b>waiting for the tip to confirm first</b>.');
+    body.appendChild(p);
+    const btn = document.createElement('button');
+    btn.className = 'op quiet'; btn.style.marginTop = '0.7rem';
+    btn.textContent = 'Preview sweep…';
+    btn.disabled = !li.tipConfirmed || sweepBusy;
+    btn.addEventListener('click', () => sweepPreviewFlow(body, btn));
+    body.appendChild(btn);
+  }
+
+  async function fetchTrailDoc(uri) {
+    const r = await fetch(uri.replace(/blocktrails\.json$/, 'trail.json'));
+    if (!r.ok) throw new Error('trail.json → HTTP ' + r.status);
+    const d = await r.json();
+    if (!d || !Array.isArray(d.trail) || !d.trail.length) throw new Error('trail.json is empty');
+    return d;
+  }
+
+  async function sweepPreviewFlow(body, btn) {
+    if (sweepBusy) return; sweepBusy = true; btn.disabled = true; btn.textContent = 'Planning…';
+    try {
+      const doc = await fetchTrailDoc(lastInspect.uri);
+      const mod = await import(ANCHOR_MOD);
+      const did = 'did:nostr:' + lastInspect.hex;
+      const pv = await mod.previewSweep(did, doc.trail);
+      const box = document.createElement('div');
+      box.className = 'dangerbox';
+      box.innerHTML = `<b>This retires the chain — permanently.</b> After this spend no future anchor can
+        advance this trail; anchoring again means starting a fresh chain from mark 1. The trail's
+        <i>history</i> stays readable and verifiable forever.<br><br>
+        <span class="mono">${esc(pv.from.slice(0, 16))}… → ${esc(pv.to.slice(0, 16))}…</span><br>
+        sweeps <b>${sats(pv.value)} sats</b> (input ${sats(pv.inputValue)} − fee ${sats(pv.fee)} @ ${esc(String(pv.feeRate))} sat/vB)
+        across ${pv.anchoredMarks} anchored mark${pv.anchoredMarks === 1 ? '' : 's'}.`;
+      const go = document.createElement('button');
+      go.className = 'op danger'; go.style.marginTop = '0.7rem';
+      go.textContent = 'Sweep — retire the chain';
+      go.addEventListener('click', () => sweepGo(go, doc, did));
+      box.appendChild(document.createElement('br'));
+      box.appendChild(go);
+      body.appendChild(box);
+      btn.remove();
+    } catch (e) {
+      const err = document.createElement('div');
+      err.className = 'warnbox'; err.textContent = '⚠ ' + e.message;
+      body.appendChild(err);
+      btn.disabled = false; btn.textContent = 'Preview sweep…';
+    } finally { sweepBusy = false; }
+  }
+
+  function sessionKey() {
+    // xlogin keeps the raw key for guest / pasted-key logins; extensions
+    // (NIP-07) cannot sign taproot spends, so we fall back to asking.
+    try {
+      const a = JSON.parse(localStorage.getItem('currentAccount'));
+      if (a && /^[0-9a-f]{64}$/.test(String(a.privkey || ''))) return a.privkey;
+    } catch { /* fall through */ }
+    const k = String(prompt('Signing needs your 64-hex nostr private key (extensions cannot sign taproot).\nIt is used once, in this tab, and not stored:') || '').trim().toLowerCase();
+    return /^[0-9a-f]{64}$/.test(k) ? k : null;
+  }
+
+  async function sweepGo(goBtn, doc, did) {
+    if (sweepBusy) return; sweepBusy = true; goBtn.disabled = true; goBtn.textContent = 'Signing & broadcasting…';
+    try {
+      const key = sessionKey();
+      if (!key) throw new Error('no key — sweep cancelled');
+      const mod = await import(ANCHOR_MOD);
+      const r = await mod.sweep(did, doc.trail, { key });
+      const ok = document.createElement('div');
+      ok.className = 'warnbox';
+      ok.style.background = 'var(--okbg)'; ok.style.borderColor = '#bfe3cb'; ok.style.color = '#14532d';
+      ok.innerHTML = `✓ Swept <b>${sats(r.value)} sats</b> to <span class="mono">${esc(r.to.slice(0, 16))}…</span> —
+        <a href="${esc(r.explorer)}" target="_blank" rel="noopener">${esc(r.txid.slice(0, 12))}…</a>.
+        The chain is retired; the map below will show it once the spend propagates.`;
+      goBtn.parentElement.appendChild(ok);
+      goBtn.remove();
+      setTimeout(() => inspect(lastInspect.uri), 4000);
+    } catch (e) {
+      const err = document.createElement('div');
+      err.className = 'warnbox'; err.textContent = '⚠ ' + e.message;
+      goBtn.parentElement.appendChild(err);
+      goBtn.disabled = false; goBtn.textContent = 'Sweep — retire the chain';
+    } finally { sweepBusy = false; }
+  }
 </script>
 <script src="https://unpkg.com/xlogin"></script>
 </body>
