@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>og poster</title>
+<style>body{margin:0;background:#444}canvas{display:block}</style></head>
+<body>
+<canvas id="og" width="1200" height="630"></canvas>
+<script>
+// 1200×630 OG poster for blocktrails verify/advanced — a trail of verified
+// marks winding across light country, the spend-chain as trail blazes.
+const cv = document.getElementById('og'), ctx = cv.getContext('2d');
+const W = 1200, H = 630;
+
+// light ground, the verifier's radial sky
+let g = ctx.createRadialGradient(600, -140, 100, 600, -140, 900);
+g.addColorStop(0, '#e6eef7'); g.addColorStop(1, '#f2f5fa');
+ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+// faint contour hills
+ctx.strokeStyle = 'rgba(100,116,139,.10)'; ctx.lineWidth = 2;
+for (let i = 0; i < 5; i++) {
+  ctx.beginPath();
+  for (let x = -20; x <= W + 20; x += 12) {
+    const y = 400 + i * 45 + Math.sin(x * 0.006 + i * 1.7) * 26 + Math.sin(x * 0.017 + i) * 9;
+    x === -20 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// the trail: a dotted path through five marks
+const P = [[110, 470], [340, 380], [590, 430], [850, 330], [1080, 380]];
+ctx.setLineDash([2, 14]); ctx.lineCap = 'round';
+ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 5;
+ctx.beginPath();
+ctx.moveTo(P[0][0], P[0][1]);
+for (let i = 1; i < P.length; i++) {
+  const [x0, y0] = P[i - 1], [x1, y1] = P[i];
+  ctx.quadraticCurveTo((x0 + x1) / 2, Math.min(y0, y1) + 70, x1, y1);
+}
+ctx.stroke(); ctx.setLineDash([]);
+
+// marks: green verified pills, the last violet & live
+P.forEach(([x, y], i) => {
+  const live = i === P.length - 1;
+  const r = live ? 34 : 28;
+  ctx.fillStyle = 'rgba(30,41,59,.10)';
+  ctx.beginPath(); ctx.ellipse(x + 3, y + 8, r, r * 0.45, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = live ? '#f5f3ff' : '#ecfdf3';
+  ctx.strokeStyle = live ? '#7c3aed' : '#16a34a';
+  ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = live ? '#7c3aed' : '#16a34a';
+  ctx.font = `800 ${live ? 26 : 24}px -apple-system,Segoe UI,Arial,sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(live ? '●' : '✓', x, y + 1);
+  // block tag under each mark
+  ctx.fillStyle = '#64748b';
+  ctx.font = '600 15px ui-monospace,monospace';
+  ctx.fillText(live ? 'live utxo' : 'block ' + (147859 + i * 26), x, y + r + 22);
+});
+
+// spend arrows between marks
+ctx.fillStyle = '#94a3b8';
+for (let i = 0; i < P.length - 1; i++) {
+  const [x0, y0] = P[i], [x1, y1] = P[i + 1];
+  const mx = (x0 + x1) / 2, my = Math.min(y0, y1) + 70/2 + (y0 + y1) / 2 / 2 - (y0+y1)/4 + 18;
+}
+
+// headline
+ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+ctx.fillStyle = '#1e293b';
+ctx.font = '800 88px -apple-system,Segoe UI,Arial,sans-serif';
+ctx.fillText('blocktrails', 92, 165);
+ctx.fillStyle = '#0d9488';
+ctx.font = '600 34px -apple-system,Segoe UI,Arial,sans-serif';
+ctx.fillText('a trail of states, anchored to Bitcoin', 96, 218);
+ctx.fillStyle = '#64748b';
+ctx.font = '500 24px -apple-system,Segoe UI,Arial,sans-serif';
+ctx.fillText('every mark spends the last — history nobody can rewrite', 96, 258);
+
+// footer chips
+const chips = [['⛓ verify', '#0d9488'], ['🥾 inspect', '#7c3aed'], ['offline, by anyone', '#64748b']];
+let cx0 = 96;
+chips.forEach(([t, c]) => {
+  ctx.font = '700 22px -apple-system,Segoe UI,Arial,sans-serif';
+  const w = ctx.measureText(t).width + 36;
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#e2e8f2'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(cx0, 555, w, 44, 22); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = c;
+  ctx.fillText(t, cx0 + 18, 585);
+  cx0 += w + 14;
+});
+</script>
+</body></html>
