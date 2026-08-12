@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blocktrails — Advanced</title>
+<meta name="description" content="Operator's view of a blocktrails chain — every mark's UTXO, fees, spend-links and float health. Read-only.">
+<style>
+  :root {
+    --bg: #f2f5fa; --card: #fff; --edge: #e2e8f2; --text: #1e293b; --muted: #64748b;
+    --ok: #16a34a; --okbg: #ecfdf3; --pend: #d97706; --pendbg: #fffaeb; --bad: #dc2626; --badbg: #fef2f2;
+    --link: #0d9488; --live: #7c3aed; --livebg: #f5f3ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: radial-gradient(1100px 500px at 50% -120px, #e6eef7 0%, var(--bg) 60%);
+    color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100vh; padding-bottom: 3rem; }
+  main { max-width: 820px; margin: 0 auto; padding: 1.4rem 1rem; }
+  header { text-align: center; margin-bottom: 1.4rem; }
+  header h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+  header .sub { color: var(--muted); margin-top: 0.4rem; font-size: 0.92rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
+  .uribar { display: flex; gap: 0.5rem; }
+  .uribar input { flex: 1; border: 1px solid var(--edge); border-radius: 8px; padding: 0.55rem 0.7rem; font-size: 0.88rem; font-family: ui-monospace, monospace; }
+  .uribar button { background: var(--link); color: #fff; border: none; border-radius: 8px; padding: 0 1.1rem; font-weight: 700; cursor: pointer; }
+  h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.7rem; }
+  .meta { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+  .meta code, .mono { font-family: ui-monospace, monospace; font-size: 0.92em; background: #f1f5f9; padding: 0.05rem 0.3rem; border-radius: 4px; }
+  .pill { display: inline-block; font-size: 0.66rem; font-weight: 800; padding: 0.12rem 0.5rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .pill.ok { background: var(--okbg); color: var(--ok); } .pill.pend { background: var(--pendbg); color: var(--pend); }
+  .pill.bad { background: var(--badbg); color: var(--bad); } .pill.live { background: var(--livebg); color: var(--live); }
+  .hop { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: 0.6rem; align-items: start; padding: 0.75rem 0; border-top: 1px solid #eef2f8; }
+  .hop:first-of-type { border-top: none; }
+  .hop.live-row { background: var(--livebg); margin: 0 -1.2rem; padding-left: 1.2rem; padding-right: 1.2rem; border-radius: 0 0 12px 12px; }
+  .hop .ix { width: 2.2rem; text-align: center; font-weight: 800; font-size: 0.8rem; color: var(--muted); padding-top: 0.15rem; }
+  .hop .body .head { font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; }
+  .hop .body .det { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.6; font-family: ui-monospace, monospace; }
+  .arrow { color: var(--muted); font-size: 0.78rem; padding: 0.1rem 0 0.1rem 3rem; font-family: ui-monospace, monospace; }
+  .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; }
+  .stat { border: 1px solid var(--edge); border-radius: 10px; padding: 0.7rem 0.9rem; }
+  .stat .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
+  .stat .v { font-size: 1.15rem; font-weight: 800; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+  .stat .n { font-size: 0.74rem; color: var(--muted); margin-top: 0.1rem; }
+  .note { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+  .warnbox { background: var(--pendbg); border: 1px solid #f1dcae; border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.8rem; color: #7a5200; margin-top: 0.8rem; }
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 1.6rem; }
+  .err { color: var(--bad); }
+  .spin { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🥾 Blocktrails — Advanced</h1>
+    <div class="sub">The operator's view: every mark's UTXO, fees, spend-links and float health.
+    Read-only — for the trust question, use the <a href="./">verifier</a>.</div>
+  </header>
+
+  <div class="card">
+    <form class="uribar" id="form">
+      <input id="uri" type="text" placeholder="https://…/blocktrails.json" spellcheck="false">
+      <button type="submit">Inspect</button>
+    </form>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>
+    A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
+    lifecycle operations (sweep, top-up, unstick, test trails) are planned — this page will grow them non-custodially.
+  </footer>
+</main>
+
+<script>
+  const out = document.getElementById('out');
+  const NETS = { tbtc4: 'testnet4', tbtc3: 'testnet', tbtc: 'testnet', btc: '', mainnet: '', bitcoin: '' };
+  const apiBase = chain => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/api';
+  const explorer = (chain, txid) => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/tx/' + txid;
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const short = s => s ? esc(String(s).slice(0, 10)) + '…' : '';
+  const sats = n => n == null ? '?' : n.toLocaleString('en-US');
+
+  function parseTxo(uri) {
+    const m = String(uri).match(/^txo:([a-z0-9]+):([0-9a-f]{64}):(\d+)(?:\?(.*))?$/i);
+    if (!m) return null;
+    const q = new URLSearchParams(m[4] || '');
+    return { chain: m[1], txid: m[2], vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null };
+  }
+  function normalize(uri) {
+    uri = uri.trim();
+    if (!/^https?:\/\//.test(uri)) uri = 'https://' + uri;
+    if (!/blocktrails\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
+    return uri;
+  }
+
+  async function inspect(rawUri) {
+    const uri = normalize(rawUri);
+    document.getElementById('uri').value = uri;
+    history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
+    out.innerHTML = `<div class="card spin">Fetching <code>${esc(uri)}</code> …</div>`;
+
+    let trail;
+    try {
+      const r = await fetch(uri);
+      if (!r.ok) { out.innerHTML = `<div class="card err">HTTP ${r.status} at <code>${esc(uri)}</code>.</div>`; return; }
+      trail = await r.json();
+    } catch (e) {
+      out.innerHTML = `<div class="card err">Couldn't reach <code>${esc(uri)}</code> (${esc(e.message)}) — CORS or network.</div>`;
+      return;
+    }
+
+    const txos = (trail.txo || []).map(parseTxo).filter(Boolean);
+    const states = trail.states || [];
+    const chain = trail.chain || (txos[0] && txos[0].chain) || 'tbtc4';
+    if (!txos.length) { out.innerHTML = `<div class="card err">No marks in this trail.</div>`; return; }
+
+    out.innerHTML = `
+      <div class="card">
+        <h3>Chain</h3>
+        <div class="meta">Profile <code>${esc(trail.profile || '?')}</code> · chain <code>${esc(chain)}</code>${NETS[chain] !== '' ? ' (testnet)' : ''} ·
+          base <code>${short(trail.pubkeyBase)}</code> · <b>${txos.length}</b> mark${txos.length === 1 ? '' : 's'} ·
+          <a href="./?uri=${encodeURIComponent(uri)}">run the verifier ↗</a></div>
+        <div id="hops" style="margin-top:.4rem"></div>
+      </div>
+      <div class="card"><h3>Float health</h3><div class="statgrid" id="stats"><span class="spin">reading the chain…</span></div><div id="warn"></div></div>`;
+
+    const hopsEl = document.getElementById('hops');
+    // fetch all txs + outspends concurrently — read-only chain archaeology
+    const info = await Promise.all(txos.map(async t => {
+      try {
+        const [tx, spend] = await Promise.all([
+          fetch(apiBase(t.chain) + '/tx/' + t.txid).then(r => { if (!r.ok) throw 0; return r.json(); }),
+          fetch(apiBase(t.chain) + '/tx/' + t.txid + '/outspend/' + t.vout).then(r => { if (!r.ok) throw 0; return r.json(); }),
+        ]);
+        const o = tx.vout && tx.vout[t.vout];
+        return { t, ok: true, value: o ? o.value : null, addr: o ? o.scriptpubkey_address : null,
+                 confirmed: !!(tx.status && tx.status.confirmed), height: tx.status && tx.status.block_height,
+                 spent: !!spend.spent, spentBy: spend.txid || null };
+      } catch { return { t, ok: false }; }
+    }));
+
+    let prevValue = null, prevTxid = null;
+    info.forEach((h, i) => {
+      const row = document.createElement('div');
+      const isTip = h.ok && !h.spent;
+      row.className = 'hop' + (isTip ? ' live-row' : '');
+      let pill, det;
+      if (!h.ok) { pill = '<span class="pill bad">not found</span>'; det = 'unreachable on ' + esc(h.t.chain); }
+      else {
+        const fee = prevValue != null && h.value != null ? prevValue - h.value : null;
+        pill = isTip
+          ? '<span class="pill live">live utxo</span>' + (h.confirmed ? '' : ' <span class="pill pend">pending</span>')
+          : h.confirmed ? '<span class="pill ok">spent forward</span>' : '<span class="pill pend">pending</span>';
+        det = `<a href="${explorer(h.t.chain, h.t.txid)}" target="_blank" rel="noopener">${short(h.t.txid)}</a>`
+            + ` · ${sats(h.value)} sats · ${esc(h.addr || '').slice(0, 14)}…`
+            + (h.confirmed ? ` · block ${h.height}` : ' · mempool')
+            + (fee != null ? ` · fee paid −${sats(fee)}` : '')
+            + (h.t.amount != null ? (h.t.amount === h.value ? ' · amount ✓' : ` · <span class="err">amount ✗ (trail says ${sats(h.t.amount)})</span>`) : '');
+      }
+      row.innerHTML = `<div class="ix">${i + 1}</div><div class="body">
+          <div class="head">${esc(states[i] || 'mark ' + (i + 1))}</div>
+          <div class="det">${det}</div></div>
+        <div class="stat-col">${pill}</div>`;
+      hopsEl.appendChild(row);
+      if (h.ok && h.spent && h.spentBy) {
+        const next = txos[i + 1];
+        const good = next && h.spentBy === next.txid;
+        const a = document.createElement('div');
+        a.className = 'arrow';
+        a.innerHTML = good ? '│ spent by mark ' + (i + 2) + ' ✓'
+          : '│ <span class="err">spent by ' + short(h.spentBy) + ' — NOT the next mark ✗</span>';
+        hopsEl.appendChild(a);
+      }
+      if (h.ok) { prevValue = h.value; prevTxid = h.t.txid; }
+    });
+
+    // ---- float health
+    const okHops = info.filter(h => h.ok && h.value != null);
+    const tip = info.find(h => h.ok && !h.spent);
+    const fees = [];
+    for (let i = 1; i < okHops.length; i++) fees.push(okHops[i - 1].value - okHops[i].value);
+    const posFees = fees.filter(f => f > 0);
+    const avgFee = posFees.length ? Math.round(posFees.reduce((a, b) => a + b, 0) / posFees.length) : null;
+    const genesis = okHops.length ? okHops[0].value : null;
+    const tipVal = tip ? tip.value : null;
+    const marksLeft = tipVal != null && avgFee ? Math.floor(tipVal / avgFee) : null;
+    const stats = document.getElementById('stats');
+    stats.innerHTML = `
+      <div class="stat"><div class="k">Live tip</div><div class="v">${tip ? sats(tipVal) + ' sats' : '— none —'}</div>
+        <div class="n">${tip ? (tip.confirmed ? 'confirmed, block ' + tip.height : 'pending in mempool') : 'every output spent — chain retired?'}</div></div>
+      <div class="stat"><div class="k">Genesis float</div><div class="v">${sats(genesis)} sats</div><div class="n">mark 1's output</div></div>
+      <div class="stat"><div class="k">Fees paid</div><div class="v">${genesis != null && tipVal != null ? sats(genesis - tipVal) : '?'} sats</div>
+        <div class="n">${posFees.length} advance${posFees.length === 1 ? '' : 's'} · avg ${sats(avgFee)}/mark</div></div>
+      <div class="stat"><div class="k">Marks of life left</div><div class="v">${marksLeft != null ? '~' + marksLeft : '?'}</div>
+        <div class="n">at the average fee</div></div>`;
+    const warn = document.getElementById('warn');
+    if (marksLeft != null && marksLeft < 10) {
+      warn.innerHTML = `<div class="warnbox">⚠ The float is running dry — fewer than ten advances left. Top up at the next anchor, or the trail stalls.</div>`;
+    } else if (!tip) {
+      warn.innerHTML = `<div class="warnbox">⚠ No live UTXO: the last mark's output is spent outside the trail. This chain cannot advance — retired.</div>`;
+    }
+  }
+
+  document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('uri').value; if (v.trim()) inspect(v); });
+  const param = new URLSearchParams(location.search).get('uri');
+  if (param) inspect(param);
+  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL (or link with <code>?uri=…</code>) to see the chain as an operator:
+    every mark's output value, what spent it, the live tip, fees per advance, and how many marks the float has left.</div>`;
+</script>
+</body>
+</html>
