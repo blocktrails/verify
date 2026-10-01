@@ -87,6 +87,40 @@
   </script>
 </main>
 
+<script type="module">
+  // The commitment check: every output key recomputed from the trail's base key and its states, with the
+  // same arithmetic the trails were made with — the tweak added to the full point, never its even-y lift
+  // (sidestr/spec keys.mjs, tested against the official BIP 340/341/86 vectors), on the engine's curve code.
+  // Pinned by commit; nothing here is fetched from a moving ref.
+  const SCHEMA = 'https://cdn.jsdelivr.net/gh/bitcoin-desktop/schema@b8cbf6337c7450fe14ddc5bce00c7280059aab5d/codec/';
+  const KEYS = 'https://cdn.jsdelivr.net/gh/sidestr/spec@e8deb63161c7459ed39c01d2ca9fda3d860b65b6/siding/lib/keys.mjs';
+  window.__keys = (async () => {
+    const [hash, secp, { makeKeys }] = await Promise.all([import(SCHEMA + 'hash.js'), import(SCHEMA + 'secp256k1.js'), import(KEYS)]);
+    const K = makeKeys({ hash, secp });
+    const utf8 = (t) => new TextEncoder().encode(t);
+    // JCS (RFC 8785) for the plain states profiles use: keys sorted at every level, JSON otherwise; numbers as JSON writes them
+    const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Array.isArray(v) ? '[' + v.map(jcs).join(',') + ']' : '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + jcs(v[k])).join(',') + '}';
+    // the state's hash per profile: git-mark hashes the commit's 40 hex characters as text; the others sha256(JCS(state))
+    const stateHash = (profile, st) => hash.sha256(profile === 'gitmark' ? utf8(String(st)) : typeof st === 'string' ? utf8(st) : utf8(jcs(st)));
+    // walk: the expected x-only output of every mark, from the base and the states, each tweak on the point as it is
+    const walk = (trail, txos) => {
+      const profile = String(trail.profile || 'monochrome').toLowerCase();
+      let states = trail.states; if ((!states || !states.length) && profile === 'gitmark') states = txos.map((t) => t.commit);
+      if (!states || states.length !== txos.length) throw new Error(`the trail has ${txos.length} marks and ${(states || []).length} states`);
+      let baseNote = 'the trail\'s base key (full point)'; let base = String(trail.pubkeyBase || '').toLowerCase();
+      if (!/^0[23][0-9a-f]{64}$/.test(base)) { if (/^[0-9a-f]{64}$/.test(base)) { base = '02' + base; baseNote = 'the base key as x only, read as the even-y (02) point'; } else throw new Error('the trail names no base key (pubkeyBase): nothing to recompute from'); }
+      let P = K.basePoint(base); const expected = [];
+      for (let i = 0; i < txos.length; i++) {
+        if (states[i] == null) throw new Error(`mark ${i} has no state`);
+        P = K.tweakPoint(P, K.tapTweak(P, stateHash(profile, states[i])));
+        expected.push(K.xOnly(P));
+      }
+      return { expected, profile, baseNote, rule: profile === 'gitmark' ? 'TapTweak(x(P) || sha256(commit as text)), added to P as it is' : 'TapTweak(x(P) || sha256(JCS(state))), added to P as it is' };
+    };
+    return { walk };
+  })();
+</script>
+
 <script>
   const out = document.getElementById('out');
   const NETS = { tbtc4: 'testnet4', tbtc3: 'testnet', tbtc: 'testnet', btc: '', mainnet: '', bitcoin: '' };
@@ -131,6 +165,9 @@
     const txos = (trail.txo || []).map(parseTxo);
     const states = trail.states || [];
     const chain = trail.chain || (txos[0] && txos[0].chain) || 'tbtc4';
+    // the commitment check: what each mark's output must be, from the base key and the states
+    let walked = null, walkError = '';
+    try { walked = (await window.__keys).walk(trail, txos); } catch (e) { walkError = e.message; }
 
     out.innerHTML = `
       <div class="card">
@@ -143,12 +180,13 @@
       </div>
       <div class="card">
         <div class="summary"><span class="bigstat" id="bigstat">Verifying ${txos.length} marks on-chain…</span></div>
+        <div class="meta" style="margin-top:.4rem">${walked ? `Outputs recomputed from ${walked.baseNote}: profile <code>${walked.profile}</code>, ${walked.rule}; each mark's output on-chain is compared with its recomputed key.` : `<b>Commitments not checked:</b> ${walkError}. Only confirmation is reported below.`}</div>
         <div id="marks" style="margin-top:.8rem"></div>
         <div class="note" style="margin-top:1rem">Each mark spends the previous one to a fresh taproot address and stamps a git commit. Confirmed on Bitcoin = that snapshot existed at that block, unaltered since.${NETS[chain] !== '' ? ' <b>This is testnet</b> — a demonstration, not mainnet-grade value.' : ''}</div>
       </div>`;
 
     const marksEl = document.getElementById('marks');
-    let okCount = 0, pendCount = 0, badCount = 0;
+    let okCount = 0, pendCount = 0, badCount = 0, commitOK = 0, commitBad = 0;
 
     for (let i = 0; i < txos.length; i++) {
       const t = txos[i];
@@ -163,17 +201,22 @@
         const o = tx.vout && tx.vout[t.vout];
         const amtOK = t.amount == null || (o && o.value === t.amount);
         const linkOK = i === 0 || (txos[i-1] && tx.vin && tx.vin.some(v => v.txid === txos[i-1].txid));
+        // the commitment: the output script must be the recomputed key, whatever the confirmation state
+        const spk = o && o.scriptpubkey; const commits = walked ? (spk ? spk === '5120' + walked.expected[i] : null) : null;
+        if (commits === true) commitOK++; else if (commits === false) commitBad++;
+        const commitWords = commits === true ? 'commits to its state ✓' : commits === false ? '<b>does not commit to its state ✗</b> (output is not the recomputed key)' : walked ? 'output not readable' : 'commitment not checked';
         if (tx.status && tx.status.confirmed) {
-          cls = amtOK ? 'ok' : 'pend';
-          label = amtOK ? 'verified' : 'amount mismatch';
-          if (amtOK) okCount++; else badCount++;
-          det = `tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · block ${tx.status.block_height}` +
+          const good = amtOK && commits !== false;
+          cls = good ? 'ok' : commits === false ? 'bad' : 'pend';
+          label = commits === false ? 'wrong key' : amtOK ? (commits === true ? 'verified' : 'confirmed') : 'amount mismatch';
+          if (good) okCount++; else badCount++;
+          det = `${commitWords} · tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · block ${tx.status.block_height}` +
                 (o ? ` · ${o.value.toLocaleString()} sats${amtOK ? ' ✓' : ' ✗'}` : '') +
                 ` · ${o && o.scriptpubkey_address ? '<span title="output address">'+short(o.scriptpubkey_address)+'</span>' : ''}` +
                 (i > 0 ? ` · ${linkOK ? 'links to prev ✓' : 'chain link ✗'}` : ' · genesis');
         } else {
-          cls = 'pend'; label = 'unconfirmed'; pendCount++;
-          det = `tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · in mempool, not yet in a block`;
+          cls = commits === false ? 'bad' : 'pend'; label = commits === false ? 'wrong key' : 'unconfirmed'; if (commits === false) badCount++; else pendCount++;
+          det = `${commitWords} · tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · in mempool, not yet in a block`;
         }
       } catch (e) {
         cls = 'bad'; label = 'not found'; badCount++;
@@ -185,11 +228,12 @@
       row.querySelector('.stat').innerHTML = `<span class="pill ${cls}">${label}</span>`;
     }
 
-    const allOK = okCount === txos.length;
+    const allOK = okCount === txos.length && (!walked || commitOK === txos.length);
     const big = document.getElementById('bigstat');
+    const commitLine = walked ? ` · ${commitOK}/${txos.length} outputs are the recomputed keys${commitBad ? ` (<b>${commitBad} are not</b>)` : ''}` : ' · commitments not checked';
     big.innerHTML = allOK
-      ? `<span class="pill ok">verified</span> all ${okCount}/${txos.length} marks confirmed on-chain`
-      : `<span class="pill ${badCount ? 'bad' : 'pend'}">partial</span> ${okCount} verified · ${pendCount} pending · ${badCount} unverified`;
+      ? `<span class="pill ok">${walked ? 'verified' : 'confirmed'}</span> all ${okCount}/${txos.length} marks confirmed on-chain${commitLine}`
+      : `<span class="pill ${badCount ? 'bad' : 'pend'}">partial</span> ${okCount} verified · ${pendCount} pending · ${badCount} unverified${commitLine}`;
   }
 
   document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('uri').value; if (v.trim()) verify(v); });

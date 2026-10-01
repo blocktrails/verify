@@ -17,15 +17,28 @@ itself or at the directory containing it (the app appends `blocktrails.json`).
 
 ## What it checks
 
-For each mark in `trail.txo`:
+First the commitment, with no network: from the trail's base key (`pubkeyBase`, a
+full compressed point) and its states, every mark's output key is recomputed —
+each tweak added to the point as it is, never its even-y lift, which is how the
+trails are made (git-mark: `TapTweak(x(P) || sha256(commit as text))`; the plain
+profiles: `TapTweak(x(P) || sha256(JCS(state)))`). The arithmetic is sidestr/spec's
+`keys.mjs` on the engine's curve code, both pinned by commit.
+
+Then, for each mark in `trail.txo`:
 - the transaction exists on the named chain (via mempool.space),
+- its output **is the recomputed key** — the mark commits to its state,
 - it is **confirmed** in a block,
 - the output amount matches what the trail records,
 - it **spends the previous mark** (the chain is unbroken).
 
-A green "verified" means: that git snapshot was timestamped on Bitcoin at that
-block and the mark chain is intact. It proves the history is **timestamped and
-tamper-evident — not** that the repo's contents are correct.
+Every link is checked, not the head alone: a chain of plain additions commits only
+to the sum of its tweaks at the head; the intermediate outputs pin each state.
+
+A green "verified" means: every output is the key its state derives, and that git
+snapshot was timestamped on Bitcoin at that block with the mark chain intact. It
+proves the history is **committed, timestamped and tamper-evident — not** that the
+repo's contents are correct. A trail with no base key, or one the arithmetic cannot
+walk, is reported as **confirmed** only, and says why.
 
 ## Notes
 
