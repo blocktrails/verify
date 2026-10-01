@@ -100,8 +100,10 @@
     const utf8 = (t) => new TextEncoder().encode(t);
     // JCS (RFC 8785) for the plain states profiles use: keys sorted at every level, JSON otherwise; numbers as JSON writes them
     const jcs = (v) => v === null || typeof v !== 'object' ? JSON.stringify(v) : Array.isArray(v) ? '[' + v.map(jcs).join(',') + ']' : '{' + Object.keys(v).sort().map((k) => JSON.stringify(k) + ':' + jcs(v[k])).join(',') + '}';
-    // the state's hash per profile: git-mark hashes the commit's 40 hex characters as text; the others sha256(JCS(state))
-    const stateHash = (profile, st) => hash.sha256(profile === 'gitmark' ? utf8(String(st)) : typeof st === 'string' ? utf8(st) : utf8(jcs(st)));
+    // the state's hash, as the reference implementation's stateHash does it: a string state is its UTF-8 text (so
+    // git-mark's commit, the 40 hex characters, hashes as text); an object state is its JCS. Not JSON.stringify of a
+    // string: that would quote it, and no trail was made that way
+    const stateHash = (profile, st) => hash.sha256(typeof st === 'string' ? utf8(st) : utf8(jcs(st)));
     // walk: the expected x-only output of every mark, from the base and the states, each tweak on the point as it is
     const walk = (trail, txos) => {
       const profile = String(trail.profile || 'monochrome').toLowerCase();
@@ -115,7 +117,7 @@
         P = K.tweakPoint(P, K.tapTweak(P, stateHash(profile, states[i])));
         expected.push(K.xOnly(P));
       }
-      return { expected, profile, baseNote, rule: profile === 'gitmark' ? 'TapTweak(x(P) || sha256(commit as text)), added to P as it is' : 'TapTweak(x(P) || sha256(JCS(state))), added to P as it is' };
+      return { expected, profile, baseNote, rule: profile === 'gitmark' ? 'TapTweak(x(P) || sha256(commit as text)), added to P as it is' : 'TapTweak(x(P) || sha256(state: its text, or its JCS for an object)), added to P as it is' };
     };
     return { walk };
   })();

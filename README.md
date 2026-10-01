@@ -21,7 +21,8 @@ First the commitment, with no network: from the trail's base key (`pubkeyBase`, 
 full compressed point) and its states, every mark's output key is recomputed —
 each tweak added to the point as it is, never its even-y lift, which is how the
 trails are made (git-mark: `TapTweak(x(P) || sha256(commit as text))`; the plain
-profiles: `TapTweak(x(P) || sha256(JCS(state)))`). The arithmetic is sidestr/spec's
+profiles: `TapTweak(x(P) || sha256(state))`, a string state as its UTF-8 text and an
+object state as its JCS, as the reference implementation hashes them). The arithmetic is sidestr/spec's
 `keys.mjs` on the engine's curve code, both pinned by commit.
 
 Then, for each mark in `trail.txo`:
@@ -46,9 +47,9 @@ walk, is reported as **confirmed** only, and says why.
   GitHub Pages do; arbitrary hosts may not.
 - Chains: `tbtc4` → testnet4, `tbtc3` → testnet, mainnet → Bitcoin. Testnet
   marks are demonstrations, not mainnet-grade value.
-- A future version can add full client-side re-derivation of each taproot
-  address from `pubkeyBase` + the commit tweaks (what `git mark verify` does),
-  for cryptographic verification rather than chain lookup alone.
+- The re-derivation needs the two pinned libraries from the CDN; if they cannot
+  be loaded, the page says the commitments were not checked and reports
+  confirmation only.
 
 ## License
 
