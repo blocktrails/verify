@@ -12,8 +12,36 @@ https://blocktrails.github.io/verify/?uri=<URL of a blocktrails.json>
 
 e.g. `…/verify/?uri=https://melvin.me/public/worldcup/blocktrails.json`
 
-Or open it and paste a URL. The `uri=` may point at the `blocktrails.json`
-itself or at the directory containing it (the app appends `blocktrails.json`).
+Or open it and paste a URL, or paste the trail's JSON itself. The `uri=` may point at
+the `blocktrails.json`, at the directory containing it (the app appends `blocktrails.json`),
+or at a path on this site such as `examples/datawiki.json`.
+
+## Chains
+
+A trail names its chain by the `txo:` scheme's ids, as [bitcoin-kernel.com/utxo](https://bitcoin-kernel.com/utxo/)
+uses them: `btc`, `tbtc4`, `xbt` (Bitcoin BLAKE2b) and `txbt4` (Bitcoin BLAKE2b testnet4), plus `tbtc3`.
+Older spellings (`mainnet`, `bitcoin`, `tbtc`, `txbt`) are accepted. The table of chains and the
+explorers tried for each is `chains.js`, shared by both pages.
+
+## Marks by name and by value
+
+Each entry of `trail.txo` is either a **name**, the `txo:` URI as a string, or a **value**, an
+object with the URI as `@id` (or `uri`), the transaction's bytes as `hex`, and optionally the block
+it sits in as `block: { hash, height }`:
+
+```json
+{ "@id": "txo:txbt4:c16fa17f…:1?amount=10000&pubkey=…&commit=bc48590…",
+  "hex": "02000000000101…",
+  "block": { "hash": "000000005addb5b5…", "height": 153040 } }
+```
+
+A mark by name is fetched from the chain's explorer. A mark by value is decoded here with
+bitcoin-kernel's codec: the bytes must hash to the txid named, the output must be the recomputed
+key, the amount must match, and the input must spend the previous mark, all with no network. What
+a value cannot carry is the present: whether the mark is confirmed, and still the head. So the
+chain is still asked, when it answers, and the mark reads "verified by value" with its block "as
+given" when it does not. A trail by value is what a chain without a browser-readable explorer
+needs, and what a fraud proof has to carry. `examples/datawiki.json` is one on `txbt4`.
 
 ## What it checks
 
@@ -26,7 +54,7 @@ object state as its JCS, as the reference implementation hashes them). The arith
 `keys.mjs` on the engine's curve code, both pinned by commit.
 
 Then, for each mark in `trail.txo`:
-- the transaction exists on the named chain (via mempool.space),
+- the transaction exists on the named chain (fetched from its explorer, or decoded from the bytes the trail carries),
 - its output **is the recomputed key** — the mark commits to its state,
 - it is **confirmed** in a block,
 - the output amount matches what the trail records,

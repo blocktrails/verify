@@ -100,11 +100,10 @@
   </footer>
 </main>
 
+<script src="chains.js"></script>
 <script>
   const out = document.getElementById('out');
-  const NETS = { tbtc4: 'testnet4', tbtc3: 'testnet', tbtc: 'testnet', btc: '', mainnet: '', bitcoin: '' };
-  const apiBase = chain => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/api';
-  const explorer = (chain, txid) => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/tx/' + txid;
+  const isTestnet = chain => !!(CHAINS[canon(chain)] || {}).testnet;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const short = s => s ? esc(String(s).slice(0, 10)) + '…' : '';
   const sats = n => n == null ? '?' : n.toLocaleString('en-US');
@@ -113,7 +112,7 @@
     const m = String(uri).match(/^txo:([a-z0-9]+):([0-9a-f]{64}):(\d+)(?:\?(.*))?$/i);
     if (!m) return null;
     const q = new URLSearchParams(m[4] || '');
-    return { chain: m[1], txid: m[2], vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null };
+    return { chain: canon(m[1].toLowerCase()), txid: m[2], vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null };
   }
   function normalize(uri) {
     uri = uri.trim();
@@ -138,15 +137,15 @@
       return;
     }
 
-    const txos = (trail.txo || []).map(parseTxo).filter(Boolean);
+    const txos = (trail.txo || []).map(e => parseTxo(typeof e === 'string' ? e : e && (e['@id'] || e.uri || e.txo))).filter(Boolean);
     const states = trail.states || [];
-    const chain = trail.chain || (txos[0] && txos[0].chain) || 'tbtc4';
+    const chain = canon(trail.chain || (txos[0] && txos[0].chain) || 'tbtc4');
     if (!txos.length) { out.innerHTML = `<div class="card err">No marks in this trail.</div>`; return; }
 
     out.innerHTML = `
       <div class="card">
         <h3>Chain</h3>
-        <div class="meta">Profile <code>${esc(trail.profile || '?')}</code> · chain <code>${esc(chain)}</code>${NETS[chain] !== '' ? ' (testnet)' : ''} ·
+        <div class="meta">Profile <code>${esc(trail.profile || '?')}</code> · chain <code>${esc(chain)}</code>${isTestnet(chain) ? ' (testnet)' : ''} ·
           base <code>${short(trail.pubkeyBase)}</code> · <b>${txos.length}</b> mark${txos.length === 1 ? '' : 's'} ·
           <a href="./?uri=${encodeURIComponent(uri)}">run the verifier ↗</a></div>
         <div id="hops" style="margin-top:.4rem"></div>
@@ -158,8 +157,8 @@
     const info = await Promise.all(txos.map(async t => {
       try {
         const [tx, spend] = await Promise.all([
-          fetch(apiBase(t.chain) + '/tx/' + t.txid).then(r => { if (!r.ok) throw 0; return r.json(); }),
-          fetch(apiBase(t.chain) + '/tx/' + t.txid + '/outspend/' + t.vout).then(r => { if (!r.ok) throw 0; return r.json(); }),
+          apiGet(t.chain, '/tx/' + t.txid),
+          apiGet(t.chain, '/tx/' + t.txid + '/outspend/' + t.vout),
         ]);
         const o = tx.vout && tx.vout[t.vout];
         return { t, ok: true, value: o ? o.value : null, addr: o ? o.scriptpubkey_address : null,
