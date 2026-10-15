@@ -41,7 +41,18 @@ key, the amount must match, and the input must spend the previous mark, all with
 a value cannot carry is the present: whether the mark is confirmed, and still the head. So the
 chain is still asked, when it answers, and the mark reads "verified by value" with its block "as
 given" when it does not. A trail by value is what a chain without a browser-readable explorer
-needs, and what a fraud proof has to carry. `examples/datawiki.json` is one on `txbt4`.
+needs, and what a fraud proof has to carry.
+
+The value can also ride inside the name, so one string is a complete mark: the `txo:` URI's
+query takes `hex=<bytes>` and `block=<height>:<hash>` beside `amount`, `pubkey` and `commit`.
+Without its query it is still the name. And a whole trail can ride inside the verifier's link,
+`?trail=<the JSON, URL-encoded>` (or `?uri=data:application/json,…`), so one link carries the
+proof and nothing is fetched.
+
+The same trail, the datawiki genesis on `txbt4`, in the three shapes:
+- `examples/datawiki.json`: the mark as an object, bytes and block beside the URI;
+- `examples/datawiki-uri.json`: the mark as one `txo:` URI, bytes and block in its query (705 characters);
+- `examples/datawiki-link.txt`: the whole trail in one verifier link (1,168 characters).
 
 ## What it checks
 
