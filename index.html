@@ -94,6 +94,8 @@
   // Pinned by commit; nothing here is fetched from a moving ref.
   const SCHEMA = 'https://cdn.jsdelivr.net/gh/bitcoin-desktop/schema@b8cbf6337c7450fe14ddc5bce00c7280059aab5d/codec/';
   const KEYS = 'https://cdn.jsdelivr.net/gh/sidestr/spec@e8deb63161c7459ed39c01d2ca9fda3d860b65b6/siding/lib/keys.mjs';
+  // the kernel's codec, for a mark given by value (the transaction's bytes in the trail): it decodes the hex and recomputes the txid
+  window.__codec = (async () => { const [{ Codec }, core] = await Promise.all([import(SCHEMA + 'codec.js'), fetch('https://bitcoin-kernel.com/engine/schema/core.jsonld').then(r => r.json())]); return new Codec(core); })();
   window.__keys = (async () => {
     const [hash, secp, { makeKeys }] = await Promise.all([import(SCHEMA + 'hash.js'), import(SCHEMA + 'secp256k1.js'), import(KEYS)]);
     const K = makeKeys({ hash, secp });
@@ -123,26 +125,49 @@
   })();
 </script>
 
+<script src="chains.js"></script>
 <script>
   const out = document.getElementById('out');
-  const NETS = { tbtc4: 'testnet4', tbtc3: 'testnet', tbtc: 'testnet', btc: '', mainnet: '', bitcoin: '' };
-  const apiBase = chain => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/api';
-  const explorer = (chain, txid) => 'https://mempool.space' + (NETS[chain] ? '/' + NETS[chain] : '') + '/tx/' + txid;
   const short = s => s ? s.slice(0, 10) + '…' : '';
+  const isTestnet = chain => !!(CHAINS[canon(chain)] || {}).testnet;
 
-  function parseTxo(uri) {
-    // txo:<chain>:<txid>:<vout>?amount=A&commit=C&pubkey=P
-    const m = uri.match(/^txo:([a-z0-9]+):([0-9a-f]{64}):(\d+)(?:\?(.*))?$/i);
+  // A mark in trail.txo is either a name, the txo: URI as a string, or a value: an object with the URI as "@id"
+  // (or "uri") and the transaction's bytes as "hex", optionally the block it sits in as { "hash", "height" }.
+  // txo:<chain>:<txid>:<vout>?amount=A&commit=C&pubkey=P
+  function parseTxo(entry) {
+    const uri = typeof entry === 'string' ? entry : entry && (entry['@id'] || entry.uri || entry.txo);
+    const m = String(uri || '').match(/^txo:([a-z0-9]+):([0-9a-f]{64}):(\d+)(?:\?(.*))?$/i);
     if (!m) return null;
     const q = new URLSearchParams(m[4] || '');
-    return { chain: m[1], txid: m[2], vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null, commit: q.get('commit'), pubkey: q.get('pubkey') };
+    const t = { chain: canon(m[1].toLowerCase()), txid: m[2].toLowerCase(), vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null, commit: q.get('commit'), pubkey: q.get('pubkey') };
+    if (entry && typeof entry === 'object') { if (typeof entry.hex === 'string') t.hex = entry.hex.trim(); if (entry.block) t.block = entry.block; }
+    return t;
   }
 
+  // a URL (a blocktrails.json, or the directory holding one), a relative path on this site, or the trail itself pasted as JSON
   function normalize(uri) {
     uri = uri.trim();
-    if (!/^https?:\/\//.test(uri)) uri = 'https://' + uri;
-    if (!/blocktrails\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
+    if (uri.startsWith('{')) return uri;
+    if (!/^(https?:\/\/|\.\/|\/|examples\/)/.test(uri)) uri = 'https://' + uri;
+    if (!/\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
     return uri;
+  }
+
+  // the transaction a mark names, in the explorer's shape { vout: [{ value, scriptpubkey }], vin: [{ txid }], status }:
+  // by value it is decoded from the bytes in the trail and must hash to the txid named; by name it is fetched.
+  // The present cannot be shipped by value, so a mark given by value still asks the chain, when it answers, whether it is confirmed.
+  async function resolveTx(t) {
+    if (t.hex) {
+      const codec = await window.__codec;
+      const d = codec.decode('Transaction', t.hex);
+      const txid = codec.txid(d);
+      if (txid !== t.txid) throw Object.assign(new Error(`the bytes given hash to ${txid}, not the txid named`), { bytes: true });
+      const tx = { vout: d.outputs.map(o => ({ value: o.value, scriptpubkey: o.scriptPubKey })), vin: d.inputs.map(x => ({ txid: x.prevout.txid })),
+                   status: t.block ? { confirmed: true, block_height: t.block.height, block_hash: t.block.hash, claimed: true } : { confirmed: false, claimed: true } };
+      try { const live = await apiGet(t.chain, '/tx/' + t.txid); if (live.status) tx.status = { ...live.status, claimed: false }; } catch {}
+      return { tx, src: tx.status.claimed ? 'by value' : 'by value, status live' };
+    }
+    return { tx: await apiGet(t.chain, '/tx/' + t.txid), src: 'by name' };
   }
 
   async function verify(rawUri) {
@@ -152,7 +177,10 @@
     out.innerHTML = `<div class="card spin">Fetching <code>${uri}</code> …</div>`;
 
     let trail;
-    try {
+    if (uri.startsWith('{')) {
+      try { trail = JSON.parse(uri); } catch (e) { out.innerHTML = `<div class="card err">That is not JSON (${e.message}).</div>`; return; }
+      document.getElementById('uri').value = ''; history.replaceState(null, '', location.pathname);
+    } else try {
       const r = await fetch(uri);
       if (!r.ok) {
         out.innerHTML = `<div class="card err">No trail at that URL — <code>${uri}</code> returned <b>HTTP ${r.status}</b>. Check the path points to a <code>blocktrails.json</code>.</div>`;
@@ -166,7 +194,8 @@
 
     const txos = (trail.txo || []).map(parseTxo);
     const states = trail.states || [];
-    const chain = trail.chain || (txos[0] && txos[0].chain) || 'tbtc4';
+    const chain = canon(trail.chain || (txos[0] && txos[0].chain) || 'tbtc4');
+    const byValue = txos.filter(t => t && t.hex).length;
     // the commitment check: what each mark's output must be, from the base key and the states
     let walked = null, walkError = '';
     try { walked = (await window.__keys).walk(trail, txos); } catch (e) { walkError = e.message; }
@@ -175,16 +204,16 @@
       <div class="card">
         <h3>Trail</h3>
         <div class="meta">
-          Profile <code>${trail.profile || '?'}</code> · schema <code>${trail.version || '?'}</code> · chain <code>${chain}</code>${NETS[chain] !== '' ? ' (testnet)' : ''}<br>
-          Base key <code>${short(trail.pubkeyBase || '')}</code> · <b>${txos.length}</b> mark${txos.length === 1 ? '' : 's'}<br>
-          Source <a href="${uri}" target="_blank" rel="noopener">${uri}</a>
+          Profile <code>${trail.profile || '?'}</code> · schema <code>${trail.version || '?'}</code> · chain <code>${chain}</code>${isTestnet(chain) ? ' (testnet)' : ''}<br>
+          Base key <code>${short(trail.pubkeyBase || '')}</code> · <b>${txos.length}</b> mark${txos.length === 1 ? '' : 's'}${byValue ? ` · ${byValue} given by value (bytes in the trail)` : ''}<br>
+          Source ${uri.startsWith('{') ? 'pasted' : `<a href="${uri}" target="_blank" rel="noopener">${uri}</a>`}
         </div>
       </div>
       <div class="card">
         <div class="summary"><span class="bigstat" id="bigstat">Verifying ${txos.length} marks on-chain…</span></div>
         <div class="meta" style="margin-top:.4rem">${walked ? `Outputs recomputed from ${walked.baseNote}: profile <code>${walked.profile}</code>, ${walked.rule}; each mark's output on-chain is compared with its recomputed key.` : `<b>Commitments not checked:</b> ${walkError}. Only confirmation is reported below.`}</div>
         <div id="marks" style="margin-top:.8rem"></div>
-        <div class="note" style="margin-top:1rem">Each mark spends the previous one to a fresh taproot address and stamps a git commit. Confirmed on Bitcoin = that snapshot existed at that block, unaltered since.${NETS[chain] !== '' ? ' <b>This is testnet</b> — a demonstration, not mainnet-grade value.' : ''}</div>
+        <div class="note" style="margin-top:1rem">Each mark spends the previous one to a fresh taproot address and stamps a git commit. Confirmed on Bitcoin = that snapshot existed at that block, unaltered since.${isTestnet(chain) ? ' <b>This is testnet</b> — a demonstration, not mainnet-grade value.' : ''}</div>
       </div>`;
 
     const marksEl = document.getElementById('marks');
@@ -199,7 +228,7 @@
 
       let cls = 'bad', label = 'not found', det = '';
       try {
-        const tx = await (await fetch(apiBase(t.chain) + '/tx/' + t.txid)).json();
+        const { tx, src } = await resolveTx(t);
         const o = tx.vout && tx.vout[t.vout];
         const amtOK = t.amount == null || (o && o.value === t.amount);
         const linkOK = i === 0 || (txos[i-1] && tx.vin && tx.vin.some(v => v.txid === txos[i-1].txid));
@@ -210,19 +239,19 @@
         if (tx.status && tx.status.confirmed) {
           const good = amtOK && commits !== false;
           cls = good ? 'ok' : commits === false ? 'bad' : 'pend';
-          label = commits === false ? 'wrong key' : amtOK ? (commits === true ? 'verified' : 'confirmed') : 'amount mismatch';
+          label = commits === false ? 'wrong key' : amtOK ? (commits === true ? (tx.status.claimed ? 'verified by value' : 'verified') : 'confirmed') : 'amount mismatch';
           if (good) okCount++; else badCount++;
-          det = `${commitWords} · tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · block ${tx.status.block_height}` +
+          det = `${commitWords} · tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · block ${tx.status.block_height}${tx.status.claimed ? ' <span title="the block is as the trail states it; the chain did not answer to confirm">as given</span>' : ''} · ${src}` +
                 (o ? ` · ${o.value.toLocaleString()} sats${amtOK ? ' ✓' : ' ✗'}` : '') +
                 ` · ${o && o.scriptpubkey_address ? '<span title="output address">'+short(o.scriptpubkey_address)+'</span>' : ''}` +
                 (i > 0 ? ` · ${linkOK ? 'links to prev ✓' : 'chain link ✗'}` : ' · genesis');
         } else {
           cls = commits === false ? 'bad' : 'pend'; label = commits === false ? 'wrong key' : 'unconfirmed'; if (commits === false) badCount++; else pendCount++;
-          det = `${commitWords} · tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · in mempool, not yet in a block`;
+          det = `${commitWords} · tx <a href="${explorer(t.chain, t.txid)}" target="_blank" rel="noopener">${short(t.txid)}</a> · ${tx.status.claimed ? 'no block given, and the chain did not answer' : 'in mempool, not yet in a block'} · ${src}`;
         }
       } catch (e) {
-        cls = 'bad'; label = 'not found'; badCount++;
-        det = `tx <code>${short(t.txid)}</code> not found on ${t.chain} — may be unbroadcast or wrong network`;
+        cls = 'bad'; label = e.bytes ? 'bad bytes' : 'not found'; badCount++;
+        det = e.bytes ? e.message : `tx <code>${short(t.txid)}</code> not found on ${t.chain} (${e.message}) — may be unbroadcast, the wrong network, or an explorer that does not answer browsers; a trail can carry the bytes instead`;
       }
       row.querySelector('.ix').className = 'ix ' + cls;
       row.querySelector('.ix').textContent = cls === 'ok' ? '✓' : cls === 'pend' ? '⏳' : '✗';
@@ -234,14 +263,14 @@
     const big = document.getElementById('bigstat');
     const commitLine = walked ? ` · ${commitOK}/${txos.length} outputs are the recomputed keys${commitBad ? ` (<b>${commitBad} are not</b>)` : ''}` : ' · commitments not checked';
     big.innerHTML = allOK
-      ? `<span class="pill ok">${walked ? 'verified' : 'confirmed'}</span> all ${okCount}/${txos.length} marks confirmed on-chain${commitLine}`
+      ? `<span class="pill ok">${walked ? 'verified' : 'confirmed'}</span> all ${okCount}/${txos.length} marks confirmed${byValue ? ' (some as the trail states; see each mark)' : ' on-chain'}${commitLine}`
       : `<span class="pill ${badCount ? 'bad' : 'pend'}">partial</span> ${okCount} verified · ${pendCount} pending · ${badCount} unverified${commitLine}`;
   }
 
   document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('uri').value; if (v.trim()) verify(v); });
   const param = new URLSearchParams(location.search).get('uri');
   if (param) verify(param);
-  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, or link here with <code>?uri=…</code>. The trail is fetched live and each mark checked against the Bitcoin chain it names.</div>`;
+  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, the trail's JSON itself, or link here with <code>?uri=…</code>. A mark given by name is fetched from the chain it names; one given by value (its bytes in the trail) is decoded here and only its confirmation is asked of the chain. Try <a href="?uri=examples/datawiki.json">a txbt4 trail by value</a>.</div>`;
 </script>
 </body>
 </html>

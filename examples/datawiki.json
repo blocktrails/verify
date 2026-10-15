@@ -1,0 +1,21 @@
+{
+  "@type": "Blocktrail",
+  "version": "0.0.3",
+  "profile": "gitmark",
+  "pubkeyBase": "029798d8e98acf46d1ee0e36582c0f23c0506ac672484792a326e590577434d723",
+  "chain": "txbt4",
+  "states": [
+    "bc4859083751322ed7e6da2a74fbcf42b3302701"
+  ],
+  "txo": [
+    {
+      "@id": "txo:txbt4:c16fa17f349df886e30258f4d3b2488f4a0379542896bb501b7f36239d081b61:1?amount=10000&pubkey=321d67195904d5de6f18773eaf313e1865e7603ad1759c3e083e1c620b6259c0&commit=bc4859083751322ed7e6da2a74fbcf42b3302701",
+      "hex": "020000000001012e13fae0909031a302b6ac93f67022caf7fe6fc3249842ba1380708fff21da6e0000000000fdffffff022a479800000000002251209f301a665cc22297d2a68c65b6e529437b395aeee0b2d5a50b3f937b20db1ef01027000000000000225120321d67195904d5de6f18773eaf313e1865e7603ad1759c3e083e1c620b6259c00141fbdbc9449bdcfc57e879e81b658bab890ccc0d7af34984c2e8117394354a992f20c6a89155b57e762636e6fb8379e9d55ba14cf5e798290ca6fc99f68294a70c21cf550200",
+      "block": {
+        "hash": "000000005addb5b5a3cd732fd3bb599dcc10147882c8276c26c7fa4fdaca3137",
+        "height": 153040
+      }
+    }
+  ],
+  "note": "The datawiki trail on Bitcoin BLAKE2b testnet4, its one mark given by value: the transaction bytes and the block, so the commitment is checked here with no explorer; only the confirmation is asked of the chain."
+}
