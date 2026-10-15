@@ -140,6 +140,9 @@
     if (!m) return null;
     const q = new URLSearchParams(m[4] || '');
     const t = { chain: canon(m[1].toLowerCase()), txid: m[2].toLowerCase(), vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null, commit: q.get('commit'), pubkey: q.get('pubkey') };
+    // the value may ride inside the name: ?hex=<bytes>&block=<height>:<hash>, one string that is still a name without its query
+    if (q.get('hex')) t.hex = q.get('hex').trim();
+    if (q.get('block')) { const b = q.get('block').split(':'); t.block = { height: +b[0], hash: b[1] }; }
     if (entry && typeof entry === 'object') { if (typeof entry.hex === 'string') t.hex = entry.hex.trim(); if (entry.block) t.block = entry.block; }
     return t;
   }
@@ -147,7 +150,7 @@
   // a URL (a blocktrails.json, or the directory holding one), a relative path on this site, or the trail itself pasted as JSON
   function normalize(uri) {
     uri = uri.trim();
-    if (uri.startsWith('{')) return uri;
+    if (uri.startsWith('{') || uri.startsWith('data:')) return uri;
     if (!/^(https?:\/\/|\.\/|\/|examples\/)/.test(uri)) uri = 'https://' + uri;
     if (!/\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
     return uri;
@@ -170,11 +173,17 @@
     return { tx: await apiGet(t.chain, '/tx/' + t.txid), src: 'by name' };
   }
 
+  // the key and codec code is a module, which runs after this classic script: a trail given in the link would otherwise be checked before it exists
+  const loaded = () => document.readyState === 'complete' ? Promise.resolve() : new Promise(r => window.addEventListener('load', r, { once: true }));
+
   async function verify(rawUri) {
+    await loaded();
     const uri = normalize(rawUri);
-    document.getElementById('uri').value = uri;
-    history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
-    out.innerHTML = `<div class="card spin">Fetching <code>${uri}</code> …</div>`;
+    const inline = uri.startsWith('{') || uri.startsWith('data:');
+    document.getElementById('uri').value = inline ? '' : uri;
+    if (!inline) history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
+    else if (new URLSearchParams(location.search).has('uri')) history.replaceState(null, '', location.pathname); // a ?trail= link keeps its address: it is the proof
+    out.innerHTML = `<div class="card spin">${inline ? 'Reading the trail given' : `Fetching <code>${uri}</code>`} …</div>`;
 
     let trail;
     if (uri.startsWith('{')) {
@@ -206,7 +215,7 @@
         <div class="meta">
           Profile <code>${trail.profile || '?'}</code> · schema <code>${trail.version || '?'}</code> · chain <code>${chain}</code>${isTestnet(chain) ? ' (testnet)' : ''}<br>
           Base key <code>${short(trail.pubkeyBase || '')}</code> · <b>${txos.length}</b> mark${txos.length === 1 ? '' : 's'}${byValue ? ` · ${byValue} given by value (bytes in the trail)` : ''}<br>
-          Source ${uri.startsWith('{') ? 'pasted' : `<a href="${uri}" target="_blank" rel="noopener">${uri}</a>`}
+          Source ${inline ? (uri.startsWith('{') ? 'given in full' : 'a data: URL') : `<a href="${uri}" target="_blank" rel="noopener">${uri}</a>`}
         </div>
       </div>
       <div class="card">
@@ -268,9 +277,10 @@
   }
 
   document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); const v = document.getElementById('uri').value; if (v.trim()) verify(v); });
-  const param = new URLSearchParams(location.search).get('uri');
-  if (param) verify(param);
-  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, the trail's JSON itself, or link here with <code>?uri=…</code>. A mark given by name is fetched from the chain it names; one given by value (its bytes in the trail) is decoded here and only its confirmation is asked of the chain. Try <a href="?uri=examples/datawiki.json">a txbt4 trail by value</a>.</div>`;
+  const params = new URLSearchParams(location.search), param = params.get('uri'), inlineTrail = params.get('trail');
+  if (inlineTrail) verify(inlineTrail);        // ?trail=<the JSON>: the whole proof in the link, nothing fetched
+  else if (param) verify(param);
+  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, the trail's JSON itself, or link here with <code>?uri=…</code>. A mark given by name is fetched from the chain it names; one given by value (its bytes in the trail) is decoded here and only its confirmation is asked of the chain. Try <a href="?uri=examples/datawiki.json">a txbt4 trail by value</a>, or <a href="examples/datawiki-link.txt">the same trail inside one link</a>.</div>`;
 </script>
 </body>
 </html>
