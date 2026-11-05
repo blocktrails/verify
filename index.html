@@ -76,13 +76,18 @@
   <footer>
     A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
     proves a trail's history is <b>timestamped and tamper-evident</b> on Bitcoin — not that its contents are correct ·
+    <a href="view.html" id="view-link">view</a> ·
     <a href="advanced.html" id="adv-link">advanced</a>
   </footer>
   <script>
-    // the advanced page shares the ?uri= convention — carry it across
+    // view + advanced share the ?uri= convention — carry it across, always encodeURIComponent
     (function () {
       const u = new URLSearchParams(location.search).get('uri');
-      if (u) document.getElementById('adv-link').href = 'advanced.html?uri=' + encodeURIComponent(u);
+      if (u) {
+        const q = encodeURIComponent(u);
+        document.getElementById('adv-link').href = 'advanced.html?uri=' + q;
+        document.getElementById('view-link').href = 'view.html?uri=' + q;
+      }
     })();
   </script>
 </main>

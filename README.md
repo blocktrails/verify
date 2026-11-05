@@ -4,6 +4,13 @@ A single-page, zero-build verifier for [blocktrails](https://blocktrails.org) tr
 Point it at any `blocktrails.json` and it fetches the trail and checks every git
 mark against the Bitcoin chain it names.
 
+There is also a **viewer** — same `?uri=` / `?src=` convention, timeline chrome for the
+JSON-LD `Blocktrail` type, with a link back here to prove the trail on-chain:
+
+```
+https://blocktrails.org/verify/view.html?uri=<URL of a blocktrails.json>
+```
+
 ## Use
 
 ```
@@ -15,6 +22,10 @@ e.g. `…/verify/?uri=https://melvin.me/public/worldcup/blocktrails.json`
 Or open it and paste a URL, or paste the trail's JSON itself. The `uri=` may point at
 the `blocktrails.json`, at the directory containing it (the app appends `blocktrails.json`),
 or at a path on this site such as `examples/datawiki.json`.
+
+Always `encodeURIComponent` the whole trail URL when building a share link — paths such as
+`/fund-agent/` contain `&` and will split the query string if left bare. The viewer also
+accepts the alias `fund-agent` for `https://blocktrails.org/fund-agent/blocktrails.json`.
 
 ## Chains
 

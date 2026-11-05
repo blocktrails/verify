@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blocktrail · View</title>
+  <meta name="description" content="View a Blocktrail — Bitcoin-anchored JSON-LD as a readable timeline." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Blocktrail Viewer" />
+  <meta property="og:description" content="A trail of states, anchored to Bitcoin — open any blocktrails.json as a timeline." />
+  <meta property="og:url" content="https://blocktrails.org/verify/view.html" />
+  <meta property="og:image" content="https://blocktrails.org/verify/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="view.css" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <main class="shell">
+    <nav class="nav" aria-label="Tools">
+      <a href="./">Verify</a>
+      <a href="view.html" aria-current="page">View</a>
+      <a href="advanced.html" id="adv-link">Advanced</a>
+    </nav>
+
+    <header class="masthead">
+      <p class="brand">Blocktrail</p>
+      <p class="lede" id="lede">Loading trail…</p>
+    </header>
+
+    <form class="uribar" id="form">
+      <input id="uri" type="text" placeholder="https://…/blocktrails.json · or fund-agent · or examples/…" spellcheck="false" autocomplete="off" />
+      <button type="submit">View</button>
+    </form>
+
+    <div class="actions">
+      <a id="verify-link" hidden href="./">Verify on-chain</a>
+    </div>
+
+    <section class="meta" id="meta" hidden></section>
+
+    <section class="trail" id="trail" aria-live="polite">
+      <div class="status" id="status">Opening trail…</div>
+    </section>
+
+    <footer class="foot">
+      <p>
+        Load via
+        <code>?uri=</code> or <code>?src=</code>
+        (relative or absolute — always
+        <code>encodeURIComponent</code>
+        the whole URL) · alias
+        <code>fund-agent</code>
+        · or embed JSON-LD below ·
+        <a href="https://github.com/blocktrails/verify">source</a>
+      </p>
+    </footer>
+  </main>
+
+  <!-- Optional structured-data island; used when no ?uri= / ?src= is present before the demo fallback. -->
+  <script type="application/ld+json" id="blocktrail-ld"></script>
+  <script src="chains.js"></script>
+  <script src="view.js"></script>
+  <script>
+    (function () {
+      const u = new URLSearchParams(location.search).get("uri") || new URLSearchParams(location.search).get("src");
+      if (u) {
+        document.getElementById("adv-link").href = "advanced.html?uri=" + encodeURIComponent(u);
+      }
+    })();
+  </script>
+</body>
+</html>
