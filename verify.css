@@ -1,0 +1,321 @@
+/* Verify + Advanced result chrome on top of site.css */
+
+.panel {
+  margin-bottom: 1.25rem;
+  padding: 1.15rem 0;
+  border-block: 1px solid var(--line);
+  animation: rise 0.75s var(--ease) both;
+}
+
+.panel + .panel {
+  border-top: none;
+  margin-top: -1.25rem;
+}
+
+.panel h3,
+.section-label {
+  margin: 0 0 0.7rem;
+  font-family: var(--display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--leaf);
+}
+
+.meta {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.meta code,
+.mono {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  background: color-mix(in oklab, var(--mist) 70%, white);
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.2rem;
+  color: var(--ink);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.bigstat {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.status {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status.ok,
+.pill.ok {
+  background: var(--okbg);
+  color: var(--ok);
+}
+
+.status.pend,
+.pill.pend {
+  background: var(--pendbg);
+  color: var(--pend);
+}
+
+.status.bad,
+.pill.bad {
+  background: var(--badbg);
+  color: var(--bad);
+}
+
+.status.live,
+.pill.live {
+  background: var(--livebg);
+  color: var(--live);
+}
+
+/* keep .pill as alias used by existing JS */
+.pill {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mark,
+.hop {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.mark:first-of-type,
+.hop:first-of-type {
+  border-top: none;
+}
+
+.mark .ix,
+.hop .ix {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  background: var(--paper);
+  border: 2px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.mark .ix.ok,
+.hop .ix.ok {
+  border-color: var(--ok);
+  background: var(--okbg);
+  color: var(--ok);
+}
+
+.mark .ix.pend,
+.hop .ix.pend {
+  border-color: var(--pend);
+  background: var(--pendbg);
+  color: var(--pend);
+}
+
+.mark .ix.bad,
+.hop .ix.bad {
+  border-color: var(--bad);
+  background: var(--badbg);
+  color: var(--bad);
+}
+
+.mark .ix.spin,
+.hop .ix.spin {
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+.mark .body .commit,
+.hop .body .head {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.mark .body .det,
+.hop .body .det {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+  line-height: 1.55;
+  font-family: var(--mono);
+}
+
+.mark .body .det .lbl,
+.hop .body .det .lbl {
+  font-family: inherit;
+}
+
+.mark .stat,
+.hop .stat {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.hop.live-row {
+  background: var(--livebg);
+  margin: 0 -0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-radius: 0.35rem;
+}
+
+.hop .ix {
+  width: auto;
+  height: auto;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  color: var(--ink-soft);
+  padding-top: 0.15rem;
+  justify-content: flex-start;
+}
+
+.arrow {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  padding: 0.1rem 0 0.1rem 2.4rem;
+  font-family: var(--mono);
+}
+
+.statgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.8rem;
+}
+
+.stat {
+  border-top: 1px solid var(--line);
+  padding: 0.7rem 0;
+}
+
+.stat .k {
+  font-family: var(--display);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--leaf);
+  font-weight: 700;
+}
+
+.stat .v {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat .n {
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  margin-top: 0.1rem;
+}
+
+.note {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.warnbox {
+  background: var(--pendbg);
+  border-left: 3px solid var(--pend);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.86rem;
+  color: #7a5200;
+  margin-top: 0.8rem;
+}
+
+.dangerbox {
+  background: var(--badbg);
+  border-left: 3px solid var(--bad);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  color: #8e1d1d;
+  margin-top: 0.8rem;
+  line-height: 1.6;
+}
+
+button.op {
+  font-family: var(--display);
+  font-weight: 700;
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+button.op.danger {
+  background: var(--bad);
+  color: #fff;
+}
+
+button.op.quiet {
+  background: var(--mist);
+  color: var(--ink);
+}
+
+button.op[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.err {
+  color: var(--bad);
+}
+
+.spin {
+  color: var(--ink-soft);
+}
+
+/* Back-compat: JS still emits .card — restyle as panel */
+.card {
+  margin-bottom: 1.25rem;
+  padding: 1.15rem 0;
+  border-block: 1px solid var(--line);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  animation: rise 0.75s var(--ease) both;
+}
+
+.card + .card {
+  border-top: none;
+  margin-top: -1.25rem;
+  padding-top: 0;
+}

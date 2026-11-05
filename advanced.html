@@ -3,83 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blocktrails — Advanced</title>
+<title>Blocktrail · Advanced</title>
 <meta name="description" content="Operator's view of a blocktrails chain — every mark's UTXO, fees, spend-links and float health. Read-only.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Blocktrails — Advanced">
+<meta property="og:title" content="Blocktrail — Advanced">
 <meta property="og:description" content="The operator's chain map: every mark's UTXO, fees per advance, spend-links checked, float health — and lifecycle operations, non-custodially.">
 <meta property="og:url" content="https://blocktrails.org/verify/advanced.html">
 <meta property="og:image" content="https://blocktrails.org/verify/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Blocktrails — Advanced">
+<meta name="twitter:title" content="Blocktrail — Advanced">
 <meta name="twitter:description" content="Every mark's UTXO, fees, spend-links and float health — the operator's view of a blocktrail.">
 <meta name="twitter:image" content="https://blocktrails.org/verify/og-image.png">
-<style>
-  :root {
-    --bg: #f2f5fa; --card: #fff; --edge: #e2e8f2; --text: #1e293b; --muted: #64748b;
-    --ok: #16a34a; --okbg: #ecfdf3; --pend: #d97706; --pendbg: #fffaeb; --bad: #dc2626; --badbg: #fef2f2;
-    --link: #0d9488; --live: #7c3aed; --livebg: #f5f3ff;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: radial-gradient(1100px 500px at 50% -120px, #e6eef7 0%, var(--bg) 60%);
-    color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    min-height: 100vh; padding-bottom: 3rem; }
-  main { max-width: 820px; margin: 0 auto; padding: 1.4rem 1rem; }
-  header { text-align: center; margin-bottom: 1.4rem; }
-  header h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
-  header .sub { color: var(--muted); margin-top: 0.4rem; font-size: 0.92rem; }
-  a { color: var(--link); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
-  .uribar { display: flex; gap: 0.5rem; }
-  .uribar input { flex: 1; border: 1px solid var(--edge); border-radius: 8px; padding: 0.55rem 0.7rem; font-size: 0.88rem; font-family: ui-monospace, monospace; }
-  .uribar button { background: var(--link); color: #fff; border: none; border-radius: 8px; padding: 0 1.1rem; font-weight: 700; cursor: pointer; }
-  h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.7rem; }
-  .meta { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
-  .meta code, .mono { font-family: ui-monospace, monospace; font-size: 0.92em; background: #f1f5f9; padding: 0.05rem 0.3rem; border-radius: 4px; }
-  .pill { display: inline-block; font-size: 0.66rem; font-weight: 800; padding: 0.12rem 0.5rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .pill.ok { background: var(--okbg); color: var(--ok); } .pill.pend { background: var(--pendbg); color: var(--pend); }
-  .pill.bad { background: var(--badbg); color: var(--bad); } .pill.live { background: var(--livebg); color: var(--live); }
-  .hop { display: grid; grid-template-columns: 2.2rem 1fr auto; gap: 0.6rem; align-items: start; padding: 0.75rem 0; border-top: 1px solid #eef2f8; }
-  .hop:first-of-type { border-top: none; }
-  .hop.live-row { background: var(--livebg); margin: 0 -1.2rem; padding-left: 1.2rem; padding-right: 1.2rem; border-radius: 0 0 12px 12px; }
-  .hop .ix { width: 2.2rem; text-align: center; font-weight: 800; font-size: 0.8rem; color: var(--muted); padding-top: 0.15rem; }
-  .hop .body .head { font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; }
-  .hop .body .det { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.6; font-family: ui-monospace, monospace; }
-  .arrow { color: var(--muted); font-size: 0.78rem; padding: 0.1rem 0 0.1rem 3rem; font-family: ui-monospace, monospace; }
-  .statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem; }
-  .stat { border: 1px solid var(--edge); border-radius: 10px; padding: 0.7rem 0.9rem; }
-  .stat .k { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; }
-  .stat .v { font-size: 1.15rem; font-weight: 800; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
-  .stat .n { font-size: 0.74rem; color: var(--muted); margin-top: 0.1rem; }
-  .note { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
-  .warnbox { background: var(--pendbg); border: 1px solid #f1dcae; border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.8rem; color: #7a5200; margin-top: 0.8rem; }
-  .dangerbox { background: var(--badbg); border: 1px solid #f3c1c1; border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.82rem; color: #8e1d1d; margin-top: 0.8rem; line-height: 1.6; }
-  button.op { font: inherit; font-weight: 700; border: none; border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer; }
-  button.op.danger { background: var(--bad); color: #fff; }
-  button.op.quiet { background: #eef2f7; color: var(--text); }
-  button.op[disabled] { opacity: 0.5; cursor: default; }
-  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 1.6rem; }
-  .err { color: var(--bad); }
-  .spin { color: var(--muted); }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="verify.css">
 </head>
 <body>
-<main>
-  <header>
-    <h1>🥾 Blocktrails — Advanced</h1>
-    <div class="sub">The operator's view: every mark's UTXO, fees, spend-links and float health.
-    Read-only — for the trust question, use the <a href="./">verifier</a>.</div>
+<div class="atmosphere" aria-hidden="true"></div>
+<main class="shell wide">
+  <nav class="nav" aria-label="Tools">
+    <a data-nav="./" href="./">Verify</a>
+    <a data-nav="view.html" href="view.html">View</a>
+    <a data-nav="advanced.html" href="advanced.html" aria-current="page">Advanced</a>
+  </nav>
+
+  <header class="masthead">
+    <p class="brand">Blocktrail</p>
+    <p class="lede">Operator map — every mark’s UTXO, fees, spend-links and float health. Read-only; use Verify for the trust question.</p>
   </header>
 
-  <div class="card">
-    <form class="uribar" id="form">
-      <input id="uri" type="text" placeholder="https://…/blocktrails.json" spellcheck="false">
-      <button type="submit">Inspect</button>
-    </form>
+  <form class="uribar" id="form">
+    <input id="uri" type="text" placeholder="https://…/blocktrails.json · or fund-agent · or examples/…" spellcheck="false" autocomplete="off">
+    <button type="submit">Inspect</button>
+  </form>
+
+  <div class="actions">
+    <a data-cross="./" hidden href="./">Verify on-chain</a>
+    <a data-cross="view.html" hidden href="view.html">View timeline</a>
   </div>
 
   <div class="card" id="mine" hidden>
@@ -94,18 +58,14 @@
     <div class="meta" id="sweep-body"></div>
   </div>
 
-  <footer>
-    A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
-    lifecycle operations (sweep, top-up, unstick, test trails) are planned — this page will grow them non-custodially ·
-    <a href="view.html" id="view-link">view</a>
+  <footer class="foot">
+    <p>
+      Lifecycle operations (sweep, top-up, unstick, test trails) are planned — this page will grow them non-custodially ·
+      <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">source</a>
+    </p>
   </footer>
-  <script>
-    (function () {
-      const u = new URLSearchParams(location.search).get('uri');
-      if (u) document.getElementById('view-link').href = 'view.html?uri=' + encodeURIComponent(u);
-    })();
-  </script>
 </main>
+<script src="nav.js"></script>
 
 <script src="chains.js"></script>
 <script>
@@ -121,10 +81,13 @@
     const q = new URLSearchParams(m[4] || '');
     return { chain: canon(m[1].toLowerCase()), txid: m[2], vout: +m[3], amount: q.get('amount') ? +q.get('amount') : null };
   }
+  const ALIASES = { 'fund-agent': 'https://blocktrails.org/fund-agent/blocktrails.json' };
   function normalize(uri) {
     uri = uri.trim();
-    if (!/^https?:\/\//.test(uri)) uri = 'https://' + uri;
-    if (!/blocktrails\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
+    if (ALIASES[uri]) uri = ALIASES[uri];
+    if (uri.startsWith('{') || uri.startsWith('data:')) return uri;
+    if (!/^(https?:\/\/|\.\/|\/|examples\/)/.test(uri)) uri = 'https://' + uri;
+    if (!/\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
     return uri;
   }
 
@@ -132,6 +95,7 @@
     const uri = normalize(rawUri);
     document.getElementById('uri').value = uri;
     history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
+    if (window.blocktrailsNav) window.blocktrailsNav.sync(uri);
     out.innerHTML = `<div class="card spin">Fetching <code>${esc(uri)}</code> …</div>`;
 
     let trail;

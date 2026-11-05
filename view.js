@@ -151,6 +151,7 @@ function hashLink(label, value, href) {
 function renderMeta(trail, source) {
   const meta = $("meta");
   meta.hidden = false;
+  meta.className = "meta-grid";
   meta.replaceChildren(
     el("dl", {}, [el("dt", { text: "Profile" }), el("dd", { className: "plain", text: trail.profile })]),
     el("dl", {}, [el("dt", { text: "Chain" }), el("dd", { className: "plain", text: trail.chain })]),
@@ -228,10 +229,10 @@ function renderTrail(trail) {
     );
   });
 
-  if (!steps.length) {
+    if (!steps.length) {
     root.replaceChildren(
       el("p", {
-        className: "status",
+        className: "status-msg",
         text: "Trail has no marks yet — genesis only, or an empty gitmark tip.",
       })
     );
@@ -250,15 +251,15 @@ function setLede(trail) {
       : `${n} mark${n === 1 ? "" : "s"} · ${profile} · ${trail.chain}`;
 }
 
-function setVerifyLink(sourceHref) {
-  const link = $("verify-link");
-  if (!link) return;
-  if (!sourceHref || sourceHref === "embedded JSON-LD" || sourceHref === "inline JSON") {
-    link.hidden = true;
-    return;
+function setCrossLinks(sourceHref) {
+  const usable =
+    sourceHref &&
+    sourceHref !== "embedded JSON-LD" &&
+    sourceHref !== "inline JSON" &&
+    sourceHref !== "data URI";
+  if (window.blocktrailsNav) {
+    window.blocktrailsNav.sync(usable ? sourceHref : "");
   }
-  link.hidden = false;
-  link.href = "./?uri=" + encodeURIComponent(sourceHref);
 }
 
 function syncForm(raw) {
@@ -268,7 +269,7 @@ function syncForm(raw) {
 
 async function show(raw) {
   const status = $("status");
-  status.className = "status";
+  status.className = "status-msg";
   status.textContent = "Opening trail…";
   $("trail").replaceChildren(status);
   $("meta").hidden = true;
@@ -280,21 +281,22 @@ async function show(raw) {
     setLede(trail);
     renderMeta(trail, loaded.source);
     renderTrail(trail);
-    setVerifyLink(loaded.mode === "query" || loaded.mode === "data" ? loaded.source : "");
+    const share =
+      loaded.mode === "query" || loaded.mode === "data" ? loaded.source : "";
     if (loaded.mode === "query") {
       const path = loaded.source;
-      history.replaceState(
-        null,
-        "",
-        location.pathname + "?uri=" + encodeURIComponent(path.startsWith("http") ? path : new URL(path, location.href).href)
-      );
+      const abs = path.startsWith("http") ? path : new URL(path, location.href).href;
+      history.replaceState(null, "", location.pathname + "?uri=" + encodeURIComponent(abs));
+      setCrossLinks(abs);
+    } else {
+      setCrossLinks(share);
     }
   } catch (err) {
     console.error(err);
     $("lede").textContent = "Could not open this trail.";
     status.className = "error";
     status.textContent = err.message || String(err);
-    setVerifyLink("");
+    setCrossLinks("");
   }
 }
 

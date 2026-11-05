@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="site.css" />
   <link rel="stylesheet" href="view.css" />
 </head>
 <body>
@@ -20,9 +21,9 @@
 
   <main class="shell">
     <nav class="nav" aria-label="Tools">
-      <a href="./">Verify</a>
-      <a href="view.html" aria-current="page">View</a>
-      <a href="advanced.html" id="adv-link">Advanced</a>
+      <a data-nav="./" href="./">Verify</a>
+      <a data-nav="view.html" href="view.html" aria-current="page">View</a>
+      <a data-nav="advanced.html" href="advanced.html">Advanced</a>
     </nav>
 
     <header class="masthead">
@@ -36,40 +37,33 @@
     </form>
 
     <div class="actions">
-      <a id="verify-link" hidden href="./">Verify on-chain</a>
+      <a data-cross="./" id="verify-link" hidden href="./">Verify on-chain</a>
+      <a data-cross="advanced.html" id="advanced-link" hidden href="advanced.html">Advanced</a>
     </div>
 
-    <section class="meta" id="meta" hidden></section>
+    <section class="meta-grid" id="meta" hidden></section>
 
     <section class="trail" id="trail" aria-live="polite">
-      <div class="status" id="status">Opening trail…</div>
+      <div class="status-msg" id="status">Opening trail…</div>
     </section>
 
     <footer class="foot">
       <p>
         Load via
         <code>?uri=</code> or <code>?src=</code>
-        (relative or absolute — always
+        — always
         <code>encodeURIComponent</code>
-        the whole URL) · alias
+        the whole URL · alias
         <code>fund-agent</code>
-        · or embed JSON-LD below ·
+        ·
         <a href="https://github.com/blocktrails/verify">source</a>
       </p>
     </footer>
   </main>
 
-  <!-- Optional structured-data island; used when no ?uri= / ?src= is present before the demo fallback. -->
   <script type="application/ld+json" id="blocktrail-ld"></script>
   <script src="chains.js"></script>
+  <script src="nav.js"></script>
   <script src="view.js"></script>
-  <script>
-    (function () {
-      const u = new URLSearchParams(location.search).get("uri") || new URLSearchParams(location.search).get("src");
-      if (u) {
-        document.getElementById("adv-link").href = "advanced.html?uri=" + encodeURIComponent(u);
-      }
-    })();
-  </script>
 </body>
 </html>
