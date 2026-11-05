@@ -258,7 +258,7 @@
   const params = new URLSearchParams(location.search), param = params.get('uri'), inlineTrail = params.get('trail');
   if (inlineTrail) verify(inlineTrail);        // ?trail=<the JSON>: the whole proof in the link, nothing fetched
   else if (param) verify(param);
-  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, the trail's JSON itself, or link here with <code>?uri=…</code>. A mark given by name is fetched from the chain it names; one given by value (its bytes in the trail) is decoded here and only its confirmation is asked of the chain. Try <a href="?uri=examples/datawiki.json">a txbt4 trail by value</a>, or <a href="examples/datawiki-link.txt">the same trail inside one link</a>.</div>`;
+  else out.innerHTML = `<div class="card note">Paste a <code>blocktrails.json</code> URL above, the trail's JSON itself, or link here with <code>?uri=…</code>. A mark given by name is fetched from the chain it names; one given by value (its bytes in the trail) is decoded here and only its confirmation is asked of the chain. Try <a href="?uri=examples/agent-trail.json">a two-mark txbt4 trail</a>, <a href="?uri=examples/datawiki.json">a one-mark trail by value</a>, or <a href="examples/datawiki-link.txt">the datawiki trail inside one link</a>. Or <a href="view.html">view the timeline</a>.</div>`;
 </script>
 </body>
 </html>
