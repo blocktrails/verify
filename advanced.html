@@ -96,8 +96,15 @@
 
   <footer>
     A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
-    lifecycle operations (sweep, top-up, unstick, test trails) are planned — this page will grow them non-custodially.
+    lifecycle operations (sweep, top-up, unstick, test trails) are planned — this page will grow them non-custodially ·
+    <a href="view.html" id="view-link">view</a>
   </footer>
+  <script>
+    (function () {
+      const u = new URLSearchParams(location.search).get('uri');
+      if (u) document.getElementById('view-link').href = 'view.html?uri=' + encodeURIComponent(u);
+    })();
+  </script>
 </main>
 
 <script src="chains.js"></script>

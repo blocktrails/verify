@@ -1,0 +1,415 @@
+:root {
+  --ink: #152019;
+  --ink-soft: #3d4a42;
+  --mist: #e7eee8;
+  --fog: #f3f7f2;
+  --paper: #fbfaf6;
+  --leaf: #1f6b4a;
+  --leaf-deep: #0f3f2c;
+  --copper: #b45a2a;
+  --line: color-mix(in oklab, var(--leaf) 28%, transparent);
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --display: "Syne", sans-serif;
+  --serif: "Newsreader", Georgia, serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-optical-sizing: auto;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  background: var(--fog);
+  overflow-x: hidden;
+}
+
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(31, 107, 74, 0.18), transparent 60%),
+    radial-gradient(900px 600px at 100% 8%, rgba(180, 90, 42, 0.12), transparent 55%),
+    linear-gradient(165deg, #dfe9e3 0%, var(--fog) 42%, #f7f4ec 100%);
+}
+
+.atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(rgba(21, 32, 25, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 32, 25, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 20%, black 20%, transparent 75%);
+  pointer-events: none;
+}
+
+.shell {
+  width: min(720px, calc(100% - 2.5rem));
+  margin: 0 auto;
+  padding: clamp(2.5rem, 8vh, 5rem) 0 4rem;
+}
+
+.masthead {
+  margin-bottom: 1.75rem;
+  animation: rise 0.9s var(--ease) both;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  margin: 0 0 1.5rem;
+  font-family: var(--display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav a[aria-current="page"] {
+  color: var(--leaf-deep);
+}
+
+.brand {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(3rem, 10vw, 5.25rem);
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+  color: var(--leaf-deep);
+}
+
+.lede {
+  margin: 1rem 0 0;
+  max-width: 32ch;
+  color: var(--ink-soft);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.uribar {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 2rem;
+  animation: rise 0.9s var(--ease) 0.05s both;
+}
+
+.uribar input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  padding: 0.65rem 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--paper) 88%, white);
+}
+
+.uribar button {
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0 1.15rem;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--paper);
+  background: var(--leaf-deep);
+  cursor: pointer;
+}
+
+.uribar button:hover {
+  background: var(--leaf);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: -0.5rem 0 2rem;
+  font-family: var(--display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  animation: rise 0.9s var(--ease) 0.08s both;
+}
+
+.actions a {
+  color: var(--leaf-deep);
+  text-underline-offset: 0.18em;
+}
+
+.actions a[hidden] {
+  display: none;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1.5rem;
+  margin-bottom: 2.75rem;
+  padding: 1.1rem 0;
+  border-block: 1px solid var(--line);
+  animation: rise 0.9s var(--ease) 0.08s both;
+}
+
+.meta dl {
+  margin: 0;
+}
+
+.meta dt {
+  font-family: var(--display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--leaf);
+}
+
+.meta dd {
+  margin: 0.2rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  word-break: break-all;
+  color: var(--ink);
+}
+
+.meta dd.plain {
+  font-family: var(--serif);
+  font-size: 1rem;
+}
+
+.trail {
+  position: relative;
+  padding-left: 1.35rem;
+}
+
+.trail::before {
+  content: "";
+  position: absolute;
+  left: 0.35rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 2px;
+  background: linear-gradient(180deg, var(--leaf), color-mix(in oklab, var(--copper) 70%, var(--leaf)));
+  transform-origin: top;
+  animation: grow-spine 1.1s var(--ease) 0.2s both;
+}
+
+.trail:not(:has(.step))::before {
+  display: none;
+}
+
+.status,
+.error {
+  margin: 0;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.error {
+  color: var(--copper);
+  font-style: normal;
+}
+
+.step {
+  position: relative;
+  padding: 0 0 2rem 1.4rem;
+  opacity: 0;
+  transform: translateY(14px);
+  animation: rise 0.75s var(--ease) both;
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+.step::before {
+  content: "";
+  position: absolute;
+  left: -1.12rem;
+  top: 0.45rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--leaf);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--mist) 80%, white);
+}
+
+.step.is-genesis::before {
+  border-color: var(--copper);
+}
+
+.step.is-tip::before {
+  background: var(--leaf);
+  animation: tip-pulse 2.4s ease-in-out infinite;
+}
+
+.step-label {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--leaf);
+}
+
+.step.is-genesis .step-label {
+  color: var(--copper);
+}
+
+.step-title {
+  margin: 0.25rem 0 0.75rem;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.kv {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.kv div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.kv dt {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.kv dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.kv a {
+  color: var(--leaf-deep);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: color 0.2s ease;
+}
+
+.kv a:hover {
+  color: var(--copper);
+}
+
+.amount {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.foot {
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  animation: rise 0.9s var(--ease) 0.2s both;
+}
+
+.foot code {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink);
+}
+
+.foot a {
+  color: var(--leaf-deep);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes grow-spine {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes tip-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--mist) 80%, white);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--mist) 80%, white),
+      0 0 0 10px color-mix(in oklab, var(--leaf) 18%, transparent);
+  }
+}
+
+@media (max-width: 560px) {
+  .meta {
+    grid-template-columns: 1fr;
+  }
+
+  .shell {
+    width: min(100% - 1.75rem, 720px);
+  }
+
+  .uribar {
+    flex-direction: column;
+  }
+
+  .uribar button {
+    padding: 0.7rem 1.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .step {
+    opacity: 1;
+    transform: none;
+  }
+}
