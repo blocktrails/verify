@@ -4,6 +4,7 @@ const $ = (id) => document.getElementById(id);
 const ALIASES = {
   "fund-agent": "https://blocktrails.org/fund-agent/blocktrails.json",
   datawiki: "examples/datawiki.json",
+  "agent-trail": "examples/agent-trail.json",
 };
 
 function shorten(hex, head = 8, tail = 6) {
@@ -101,8 +102,8 @@ async function loadTrail() {
     }
   }
 
-  // First-visit demo so the page is never empty.
-  return fetchTrail("examples/datawiki.json");
+  // First-visit demo: a two-mark trail so the timeline is obviously multi-step.
+  return fetchTrail("examples/agent-trail.json");
 }
 
 function normalizeTrail(raw) {
@@ -302,7 +303,7 @@ async function show(raw) {
 
 function main() {
   const raw = resolveParam();
-  syncForm(raw || "examples/datawiki.json");
+  syncForm(raw || "examples/agent-trail.json");
 
   $("form")?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -315,7 +316,7 @@ function main() {
 
   window.addEventListener("popstate", () => {
     const again = resolveParam();
-    syncForm(again || "examples/datawiki.json");
+    syncForm(again || "examples/agent-trail.json");
     show(again || null);
   });
 

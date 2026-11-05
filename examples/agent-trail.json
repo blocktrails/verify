@@ -1,0 +1,17 @@
+{
+  "@id": "txo:txbt4:18e78eb5b6e099a3b64cfe6bb3af32f15418d23f37183c4688d8b802fe10745b:0?amount=10000&pubkey=aabfc39014e7ef193e3c939c05b5af10dcbec4a81a60bec910f7aa2b8b644ca4",
+  "@type": "Blocktrail",
+  "version": "0.0.3",
+  "profile": "gitmark",
+  "pubkeyBase": "03aabfc39014e7ef193e3c939c05b5af10dcbec4a81a60bec910f7aa2b8b644ca4",
+  "chain": "txbt4",
+  "states": [
+    "548ac1cb30048262722c81067b65c0723b2cac42",
+    "7bf6b19a873c54a3e0b8237ba3dd14e2b36dceb4"
+  ],
+  "txo": [
+    "txo:txbt4:58de56ea3dd7542d8f1af9ad89c6785ff2f31fbcdcd8425952750809d752bf2b:0?amount=9700&commit=548ac1cb30048262722c81067b65c0723b2cac42",
+    "txo:txbt4:7b988c5d603edfcbe305fda432015a46f395865a2cd01219c630d80e8c3ace3e:0?amount=9400&commit=7bf6b19a873c54a3e0b8237ba3dd14e2b36dceb4"
+  ],
+  "note": "A two-mark gitmark trail on txbt4 (agent identity → first mark). Marks given by name; use with the viewer to exercise a multi-step timeline."
+}

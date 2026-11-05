@@ -63,10 +63,11 @@ Without its query it is still the name. And a whole trail can ride inside the ve
 `?trail=<the JSON, URL-encoded>` (or `?uri=data:application/json,…`), so one link carries the
 proof and nothing is fetched.
 
-The same trail, the datawiki genesis on `txbt4`, in the three shapes:
-- `examples/datawiki.json`: the mark as an object, bytes and block beside the URI;
-- `examples/datawiki-uri.json`: the mark as one `txo:` URI, bytes and block in its query (705 characters);
-- `examples/datawiki-link.txt`: the whole trail in one verifier link (1,168 characters).
+Examples on this site:
+- `examples/agent-trail.json`: **two marks** on `txbt4` (by name) — the viewer’s default demo
+- `examples/datawiki.json`: one mark as an object, bytes and block beside the URI
+- `examples/datawiki-uri.json`: the same mark as one `txo:` URI with value in its query (705 characters)
+- `examples/datawiki-link.txt`: the datawiki trail inside one verifier link (1,168 characters)
 
 ## What it checks
 
