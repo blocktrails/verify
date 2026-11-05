@@ -3,94 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blocktrails Verifier</title>
+<title>Blocktrail · Verify</title>
 <meta name="description" content="Verify a blocktrails trail against Bitcoin — fetches a blocktrails.json and checks each mark on-chain.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Blocktrails Verifier">
+<meta property="og:title" content="Blocktrail Verifier">
 <meta property="og:description" content="A trail of states, anchored to Bitcoin. Paste any blocktrails.json and every mark is checked on-chain — confirmed, amount-matched, spend-linked. Offline, by anyone.">
 <meta property="og:url" content="https://blocktrails.org/verify/">
 <meta property="og:image" content="https://blocktrails.org/verify/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Blocktrails Verifier">
+<meta name="twitter:title" content="Blocktrail Verifier">
 <meta name="twitter:description" content="A trail of states, anchored to Bitcoin — every mark verified on-chain, by anyone.">
 <meta name="twitter:image" content="https://blocktrails.org/verify/og-image.png">
-<style>
-  :root {
-    --bg: #f2f5fa; --card: #fff; --edge: #e2e8f2; --text: #1e293b; --muted: #64748b;
-    --ok: #16a34a; --okbg: #ecfdf3; --pend: #d97706; --pendbg: #fffaeb; --bad: #dc2626; --badbg: #fef2f2; --link: #0d9488;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: radial-gradient(1100px 500px at 50% -120px, #e6eef7 0%, var(--bg) 60%);
-    color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    min-height: 100vh; padding-bottom: 3rem; }
-  main { max-width: 760px; margin: 0 auto; padding: 1.4rem 1rem; }
-  header { text-align: center; margin-bottom: 1.4rem; }
-  header h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
-  header .sub { color: var(--muted); margin-top: 0.4rem; font-size: 0.92rem; }
-  a { color: var(--link); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .card { background: var(--card); border: 1px solid var(--edge); border-radius: 14px;
-    box-shadow: 0 1px 3px rgba(16,24,40,.06); padding: 1.1rem 1.2rem; margin-bottom: 1rem; }
-  .uribar { display: flex; gap: 0.5rem; }
-  .uribar input { flex: 1; border: 1px solid var(--edge); border-radius: 8px; padding: 0.55rem 0.7rem; font-size: 0.88rem; font-family: ui-monospace, monospace; }
-  .uribar button { background: var(--ok); color: #fff; border: none; border-radius: 8px; padding: 0 1.1rem; font-weight: 700; cursor: pointer; }
-  .summary { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
-  .bigstat { font-size: 1.15rem; font-weight: 800; }
-  .pill { display: inline-block; font-size: 0.66rem; font-weight: 800; padding: 0.12rem 0.5rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .pill.ok { background: var(--okbg); color: var(--ok); } .pill.pend { background: var(--pendbg); color: var(--pend); } .pill.bad { background: var(--badbg); color: var(--bad); }
-  .meta { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
-  .meta code { font-family: ui-monospace, monospace; font-size: 0.92em; background: #f1f5f9; padding: 0.05rem 0.3rem; border-radius: 4px; }
-  h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.7rem; }
-  .mark { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.6rem; align-items: start; padding: 0.7rem 0; border-top: 1px solid #eef2f8; }
-  .mark:first-of-type { border-top: none; }
-  .mark .ix { width: 1.6rem; height: 1.6rem; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
-  .mark .ix.ok { background: var(--okbg); color: var(--ok); } .mark .ix.pend { background: var(--pendbg); color: var(--pend); } .mark .ix.bad { background: var(--badbg); color: var(--bad); }
-  .mark .body .commit { font-family: ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; }
-  .mark .body .det { color: var(--muted); font-size: 0.78rem; margin-top: 0.2rem; line-height: 1.55; font-family: ui-monospace, monospace; }
-  .mark .body .det .lbl { font-family: inherit; }
-  .mark .stat { text-align: right; white-space: nowrap; }
-  .note { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
-  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 1.6rem; }
-  .err { color: var(--bad); }
-  .spin { color: var(--muted); }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+<link rel="stylesheet" href="verify.css">
 </head>
 <body>
-<main>
-  <header>
-    <h1>⛓ Blocktrails Verifier</h1>
-    <div class="sub">Checks a <a href="https://blocktrails.org" target="_blank" rel="noopener">blocktrails</a> trail against Bitcoin — each git mark, verified on-chain.</div>
+<div class="atmosphere" aria-hidden="true"></div>
+<main class="shell">
+  <nav class="nav" aria-label="Tools">
+    <a data-nav="./" href="./" aria-current="page">Verify</a>
+    <a data-nav="view.html" href="view.html">View</a>
+    <a data-nav="advanced.html" href="advanced.html">Advanced</a>
+  </nav>
+
+  <header class="masthead">
+    <p class="brand">Blocktrail</p>
+    <p class="lede">Check a trail against Bitcoin — each mark confirmed, amount-matched, spend-linked.</p>
   </header>
 
-  <div class="card">
-    <form class="uribar" id="form">
-      <input id="uri" type="text" placeholder="https://…/blocktrails.json" spellcheck="false">
-      <button type="submit">Verify</button>
-    </form>
+  <form class="uribar" id="form">
+    <input id="uri" type="text" placeholder="https://…/blocktrails.json · or fund-agent · or examples/…" spellcheck="false" autocomplete="off">
+    <button type="submit">Verify</button>
+  </form>
+
+  <div class="actions">
+    <a data-cross="view.html" id="view-link" hidden href="view.html">View timeline</a>
+    <a data-cross="advanced.html" id="adv-link" hidden href="advanced.html">Advanced</a>
   </div>
 
   <div id="out"></div>
 
-  <footer>
-    A <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">blocktrails</a> tool ·
-    proves a trail's history is <b>timestamped and tamper-evident</b> on Bitcoin — not that its contents are correct ·
-    <a href="view.html" id="view-link">view</a> ·
-    <a href="advanced.html" id="adv-link">advanced</a>
+  <footer class="foot">
+    <p>
+      Proves a trail is <b>timestamped and tamper-evident</b> on Bitcoin — not that its contents are correct ·
+      always <code>encodeURIComponent</code> share URLs ·
+      <a href="https://github.com/blocktrails/verify" target="_blank" rel="noopener">source</a>
+    </p>
   </footer>
-  <script>
-    // view + advanced share the ?uri= convention — carry it across, always encodeURIComponent
-    (function () {
-      const u = new URLSearchParams(location.search).get('uri');
-      if (u) {
-        const q = encodeURIComponent(u);
-        document.getElementById('adv-link').href = 'advanced.html?uri=' + q;
-        document.getElementById('view-link').href = 'view.html?uri=' + q;
-      }
-    })();
-  </script>
 </main>
+<script src="nav.js"></script>
 
 <script type="module">
   // The commitment check: every output key recomputed from the trail's base key and its states, with the
@@ -153,8 +119,10 @@
   }
 
   // a URL (a blocktrails.json, or the directory holding one), a relative path on this site, or the trail itself pasted as JSON
+  const ALIASES = { 'fund-agent': 'https://blocktrails.org/fund-agent/blocktrails.json' };
   function normalize(uri) {
     uri = uri.trim();
+    if (ALIASES[uri]) uri = ALIASES[uri];
     if (uri.startsWith('{') || uri.startsWith('data:')) return uri;
     if (!/^(https?:\/\/|\.\/|\/|examples\/)/.test(uri)) uri = 'https://' + uri;
     if (!/\.json$/.test(uri)) uri = uri.replace(/\/?$/, '/') + 'blocktrails.json';
@@ -186,8 +154,13 @@
     const uri = normalize(rawUri);
     const inline = uri.startsWith('{') || uri.startsWith('data:');
     document.getElementById('uri').value = inline ? '' : uri;
-    if (!inline) history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
-    else if (new URLSearchParams(location.search).has('uri')) history.replaceState(null, '', location.pathname); // a ?trail= link keeps its address: it is the proof
+    if (!inline) {
+      history.replaceState(null, '', '?uri=' + encodeURIComponent(uri));
+      if (window.blocktrailsNav) window.blocktrailsNav.sync(uri);
+    } else {
+      if (new URLSearchParams(location.search).has('uri')) history.replaceState(null, '', location.pathname); // a ?trail= link keeps its address: it is the proof
+      if (window.blocktrailsNav) window.blocktrailsNav.sync('');
+    }
     out.innerHTML = `<div class="card spin">${inline ? 'Reading the trail given' : `Fetching <code>${uri}</code>`} …</div>`;
 
     let trail;

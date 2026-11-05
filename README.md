@@ -11,6 +11,9 @@ JSON-LD `Blocktrail` type, with a link back here to prove the trail on-chain:
 https://blocktrails.org/verify/view.html?uri=<URL of a blocktrails.json>
 ```
 
+Verify, View, and Advanced share one visual chrome (`site.css`) and keep `?uri=` in sync
+via the top nav (always `encodeURIComponent`).
+
 ## Use
 
 ```
